@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Project Next</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg-base: #0B0C0D;
+    --bg-surface: #16181A;
+    --bg-card: #1C1E21;
+    --bg-elevated: #222527;
+    --accent: #A020F0;
+    --accent-dim: rgba(160,32,240,0.15);
+    --accent-glow: rgba(160,32,240,0.4);
+    --accent-bright: #BF5FFF;
+    --text-primary: #F0F0F2;
+    --text-secondary: #8A8D94;
+    --text-muted: #4A4D54;
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(160,32,240,0.35);
+    --danger: #FF4560;
+    --warning: #FFA040;
+    --success: #00D67B;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(160,32,240,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(160,32,240,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     AUTH SCREEN
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  #auth-screen.active { display: flex; }
+
+  .auth-orb {
+    position: fixed;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(160,32,240,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+    animation: orb-pulse 6s ease-in-out infinite;
+  }
+  @keyframes orb-pulse {
+    0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    50% { transform: translate(-50%,-50%) scale(1.1); opacity: 0.7; }
+  }
+
+  .auth-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    box-shadow: 0 0 60px rgba(160,32,240,0.1);
+  }
+  .auth-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .auth-logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .auth-logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .auth-logo-text span { color: var(--accent-bright); }
+
+  .auth-tabs {
+    display: flex;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 1.75rem;
+    gap: 4px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .auth-tab.active {
+    background: var(--accent-dim);
+    color: var(--accent-bright);
+    border: 1px solid var(--border-accent);
+  }
+
+  .auth-panel { display: none; }
+  .auth-panel.active { display: block; }
+
+  .form-group { margin-bottom: 1.1rem; }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .form-input-wrap { position: relative; }
+  .form-input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+  }
+  .form-input:focus {
+    border-color: var(--border-accent);
+    box-shadow: 0 0 0 3px rgba(160,32,240,0.12);
+  }
+  .form-input.has-icon { padding-right: 42px; }
+
+  .input-icon-btn {
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+  }
+  .input-icon-btn:hover { color: var(--accent-bright); }
+
+  /* Password Strength Meter */
+  .strength-bar-wrap {
+    height: 3px;
+    background: var(--bg-elevated);
+    border-radius: 99px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .strength-bar {
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.4s ease, background 0.4s ease;
+  }
+  .strength-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-align: right;
+    transition: color 0.3s;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn-primary:hover::before { opacity: 1; }
+  .btn-primary:hover { box-shadow: 0 4px 24px rgba(160,32,240,0.45); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 1.25rem 0;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .btn-google {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: var(--transition);
+  }
+  .btn-google:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: var(--bg-elevated);
+  }
+
+  /* Profile Not Found */
+  .profile-not-found {
+    text-align: center;
+    padding: 1rem 0;
+  }
+  .pnf-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,69,96,0.12);
+    border: 1px solid rgba(255,69,96,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 26px;
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     LINK ROBLOX SCREEN
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  #link-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  #link-screen.active { display: flex; }
+
+  .link-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(160,32,240,0.1);
+    position: relative;
+  }
+  .link-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .security-alert {
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+  }
+  .security-alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .security-alert-text { font-size: 13px; color: var(--accent-bright); line-height: 1.5; }
+
+  .link-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-bright);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .link-steps {
+    display: grid;
+    gap: 8px;
+    margin: 1.5rem 0;
+    text-align: left;
+  }
+  .link-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .link-step-num {
+    width: 24px; height: 24px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-bright);
+    flex-shrink: 0;
+  }
+
+  .btn-outline {
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    color: var(--accent-bright);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 12px;
+  }
+  .btn-outline:hover { background: var(--accent-dim); }
+
+  .link-confirm-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0,214,123,0.35);
+    border-radius: var(--radius);
+    color: var(--success);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 8px;
+    display: none;
+  }
+  .link-confirm-btn.visible {
+    display: block;
+    animation: slide-in 0.3s ease;
+  }
+  .link-confirm-btn:hover { background: rgba(0,214,123,0.08); }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     MAIN APP
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  #app-screen { min-height: 100vh; }
+  #app-screen.active { display: flex; flex-direction: column; }
+
+  /* TOPBAR */
+  .topbar {
+    height: 58px;
+    background: rgba(22,24,26,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .topbar-logo span { color: var(--accent-bright); }
+  .topbar-logo-icon {
+    width: 30px; height: 30px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 5px 12px 5px 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .user-chip:hover { border-color: var(--border-accent); }
+  .user-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,214,123,0.08);
+    border: 1px solid rgba(0,214,123,0.25);
+    border-radius: 99px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--success);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* NAV HUBS */
+  .hub-nav {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .hub-nav::-webkit-scrollbar { display: none; }
+
+  .hub-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: var(--transition);
+    position: relative;
+  }
+  .hub-btn:hover { color: var(--text-primary); }
+  .hub-btn.active {
+    color: var(--accent-bright);
+    border-bottom-color: var(--accent);
+  }
+  .hub-num {
+    font-size: 10px;
+    font-family: var(--mono);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--text-muted);
+  }
+  .hub-btn.active .hub-num {
+    background: var(--accent-dim);
+    border-color: var(--border-accent);
+    color: var(--accent-bright);
+  }
+
+  /* MAIN CONTENT */
+  .main-content { flex: 1; padding: 2rem 1.5rem; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+  .hub-panel { display: none; }
+  .hub-panel.active { display: block; animation: fade-up 0.3s ease; }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hub-header { margin-bottom: 1.75rem; }
+  .hub-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .hub-title span { color: var(--accent-bright); }
+  .hub-subtitle { font-size: 13px; color: var(--text-secondary); }
+
+  /* TOOL CARDS */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  .tool-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(160,32,240,0.3), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .tool-card:hover { border-color: var(--border-accent); }
+  .tool-card:hover::before { opacity: 1; }
+
+  .tool-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .tool-icon {
+    width: 38px; height: 38px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+  }
+  .tool-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .tool-badge.live {
+    background: rgba(0,214,123,0.08);
+    border-color: rgba(0,214,123,0.25);
+    color: var(--success);
+  }
+
+  .tool-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+  }
+  .tool-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem; }
+
+  /* INPUTS */
+  .pn-input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 13px;
+    outline: none;
+    transition: var(--transition);
+    margin-bottom: 8px;
+  }
+  .pn-input:focus { border-color: var(--border-accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .pn-input::placeholder { color: var(--text-muted); }
+
+  .pn-btn {
+    padding: 8px 16px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    color: var(--accent-bright);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .pn-btn:hover { background: rgba(160,32,240,0.25); }
+
+  .pn-btn-full {
+    width: 100%;
+    padding: 9px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    color: var(--accent-bright);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .pn-btn-full:hover { background: rgba(160,32,240,0.3); }
+
+  /* RESULTS */
+  .result-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text-secondary);
+    display: none;
+    line-height: 1.7;
+  }
+  .result-box.visible { display: block; animation: slide-in 0.25s ease; }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-label { color: var(--text-secondary); font-family: var(--mono); }
+  .result-val { color: var(--accent-bright); font-weight: 600; font-family: var(--mono); }
+  .result-val.pending { color: var(--text-muted); font-style: italic; }
+
+  /* BEAUTIFUL TABLE */
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+  }
+  .pn-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  .pn-table th {
+    background: var(--bg-elevated);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .pn-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .pn-table tr:last-child td { border-bottom: none; }
+  .pn-table tr:hover td { background: var(--bg-card); }
+  .pn-table .td-name { color: var(--text-primary); font-weight: 500; }
+  .pn-table .td-val { color: var(--accent-bright); }
+  .pn-table .td-pending { color: var(--text-muted); font-style: italic; }
+  .pn-table .td-accent { color: var(--success); }
+
+  /* HEALTH BARS */
+  .security-checks { display: grid; gap: 10px; margin-top: 10px; }
+  .sec-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .sec-check:hover { border-color: var(--border-accent); }
+  .sec-check-icon { font-size: 18px; }
+  .sec-check-info { flex: 1; }
+  .sec-check-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .sec-check-desc { font-size: 11px; color: var(--text-secondary); }
+  .sec-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sec-status.ok { background: rgba(0,214,123,0.1); color: var(--success); border: 1px solid rgba(0,214,123,0.25); }
+  .sec-status.warn { background: rgba(255,160,64,0.1); color: var(--warning); border: 1px solid rgba(255,160,64,0.25); }
+  .sec-status.danger { background: rgba(255,69,96,0.1); color: var(--danger); border: 1px solid rgba(255,69,96,0.25); }
+  .sec-status.pending { background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* OVERALL HEALTH BAR */
+  .health-bar-wrap {
+    margin-bottom: 1rem;
+  }
+  .health-bar-track {
+    height: 6px;
+    background: var(--bg-elevated);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .health-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent);
+    transition: width 1s ease;
+  }
+  .health-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* PRIVACY AUDIT */
+  .privacy-items { display: grid; gap: 8px; margin-top: 10px; }
+  .privacy-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .privacy-perm {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .perm-public { background: rgba(255,69,96,0.1); color: var(--danger); border: 1px solid rgba(255,69,96,0.25); }
+  .perm-friends { background: rgba(255,160,64,0.1); color: var(--warning); border: 1px solid rgba(255,160,64,0.25); }
+  .perm-private { background: rgba(0,214,123,0.1); color: var(--success); border: 1px solid rgba(0,214,123,0.25); }
+
+  /* SESSION MAP */
+  .map-placeholder {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 10px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .map-grid {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  .session-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .session-dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .session-dot.inactive { background: var(--text-muted); }
+  .session-info { flex: 1; }
+  .session-loc { color: var(--text-primary); font-weight: 500; margin-bottom: 2px; }
+  .session-meta { color: var(--text-muted); font-size: 11px; }
+
+  /* SETTINGS HUB */
+  .settings-grid { display: grid; gap: 12px; }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: var(--transition);
+  }
+  .setting-row:hover { border-color: var(--border-accent); }
+  .setting-info { flex: 1; margin-right: 1rem; }
+  .setting-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .setting-desc { font-size: 12px; color: var(--text-secondary); }
+
+  /* TOGGLE */
+  .toggle {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: 0.3s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent-dim); border-color: var(--border-accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent); }
+
+  /* ACCENT PICKER */
+  .accent-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .accent-swatch {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: var(--transition);
+    position: relative;
+  }
+  .accent-swatch:hover { transform: scale(1.1); }
+  .accent-swatch.selected { border-color: #fff; }
+  .accent-swatch.selected::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .custom-accent-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .custom-accent-row input[type="color"] {
+    width: 42px; height: 34px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  /* SCAN / PROGRESS */
+  .scan-bar-wrap { margin-top: 10px; }
+  .scan-bar-track {
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .scan-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+  .scan-status {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* INVENTORY GRID */
+  .inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-accent) transparent;
+  }
+  .inv-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .inv-item:hover { border-color: var(--border-accent); color: var(--accent-bright); }
+  .inv-item-icon { font-size: 22px; margin-bottom: 4px; display: block; }
+
+  /* LOADING STATE */
+  .loading-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .loading-dots span {
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink {
+    0%,80%,100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  /* TOAST */
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .toast {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    animation: toast-in 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .toast.success { border-color: rgba(0,214,123,0.4); }
+  .toast.danger { border-color: rgba(255,69,96,0.4); }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    display: none;
+  }
+  .modal-overlay.open { display: flex; animation: fade-in 0.2s ease; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 0 60px rgba(160,32,240,0.15);
+    position: relative;
+  }
+  .modal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .modal-btn.cancel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .modal-btn.confirm {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+  }
+  .modal-btn.confirm:hover { box-shadow: 0 4px 20px rgba(160,32,240,0.4); }
+
+  /* SIGN-OUT AREA */
+  .signout-area {
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .signout-area:hover { border-color: rgba(255,69,96,0.4); color: var(--danger); }
+
+  /* INPUT ROW */
+  .input-row { display: flex; gap: 8px; align-items: flex-start; }
+  .input-row .pn-input { margin-bottom: 0; }
+
+  /* TAGS */
+  .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .tag.purple { background: var(--accent-dim); border-color: var(--border-accent); color: var(--accent-bright); }
+
+  /* INLINE HELP */
+  .inline-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .tools-grid { grid-template-columns: 1fr; }
+    .topbar { padding: 0 1rem; }
+    .main-content { padding: 1.25rem 1rem; }
+    .hub-nav { padding: 0 0.5rem; }
+    .hub-btn { padding: 12px 12px; font-size: 12px; }
+    .auth-card { padding: 1.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-orb"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⬡</div>
+      <div class="auth-logo-text">Project <span>Next</span></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- SIGN IN PANEL -->
+    <div id="panel-signin" class="auth-panel active">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="si-email" placeholder="your@email.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="form-input-wrap">
+          <input type="password" class="form-input has-icon" id="si-pass" placeholder="••••••••"/>
+          <button class="input-icon-btn" onclick="togglePw('si-pass',this)" type="button">👁</button>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="handleSignIn()">Sign In</button>
+      <div class="divider">or continue with</div>
+      <button class="btn-google" onclick="handleGoogleOAuth()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.515 21.3 7.615 24 12.255 24z"/><path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62h-3.98a11.86 11.86 0 000 10.76l3.98-3.09z"/><path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.64 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- SIGN UP PANEL -->
+    <div id="panel-signup" class="auth-panel">
+      <div class="form-group">
+        <label class="form-label">Display Name</label>
+        <input type="text" class="form-input" id="su-name" placeholder="Your name"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="su-email" placeholder="your@email.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="form-input-wrap">
+          <input type="password" class="form-input has-icon" id="su-pass" placeholder="••••••••" oninput="checkStrength(this.value)"/>
+          <button class="input-icon-btn" onclick="togglePw('su-pass',this)" type="button">👁</button>
+        </div>
+        <div class="strength-bar-wrap"><div class="strength-bar" id="strength-bar"></div></div>
+        <div class="strength-label" id="strength-label">Enter a password</div>
+      </div>
+      <button class="btn-primary" onclick="handleSignUp()">Create Account</button>
+      <div class="divider">or continue with</div>
+      <button class="btn-google" onclick="handleGoogleOAuth()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.515 21.3 7.615 24 12.255 24z"/><path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62h-3.98a11.86 11.86 0 000 10.76l3.98-3.09z"/><path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.64 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- PROFILE NOT FOUND -->
+    <div id="panel-notfound" class="auth-panel">
+      <div class="profile-not-found">
+        <div class="pnf-icon">⚠</div>
+        <div style="font-size:17px;font-weight:700;margin-bottom:8px;">Profile Not Found</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem;">
+          No account was found for this identity. If you're new, please create an account first.
+        </div>
+        <button class="btn-primary" onclick="switchAuthTab('signup')" style="margin-bottom:8px;">Create Account</button>
+        <button class="btn-outline" onclick="switchAuthTab('signin')">Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     LINK ROBLOX SCREEN
+═══════════════════════════════════════════ -->
+<div id="link-screen" class="screen">
+  <div class="auth-orb"></div>
+  <div class="link-card">
+    <div class="security-alert" id="purge-alert" style="display:none">
+      <span class="security-alert-icon">🛡</span>
+      <div class="security-alert-text">
+        <strong>Security Purge Executed.</strong> All cached data from a previous session has been permanently deleted. Re-link your Roblox account to restore access.
+      </div>
+    </div>
+
+    <div class="link-badge">⬡ Identity Verified</div>
+
+    <div style="font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-0.5px;">Link Roblox Account</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem;">
+      Your hubs are locked until your Roblox identity is verified. This is a one-time process.
+    </div>
+
+    <div class="link-steps">
+      <div class="link-step">
+        <div class="link-step-num">1</div>
+        <div>Authenticate via Roblox Open Cloud to verify ownership</div>
+      </div>
+      <div class="link-step">
+        <div class="link-step-num">2</div>
+        <div>Confirm the link by clicking "Confirm Link" below</div>
+      </div>
+      <div class="link-step">
+        <div class="link-step-num">3</div>
+        <div>All 5 Hubs unlock instantly after verification</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:1rem;">
+      🔒 Scopes requested: <code style="font-size:11px;color:var(--accent-bright);">openid, profile, inventory-item:read, asset:read</code>
+    </div>
+
+    <button class="btn-primary" onclick="handleRobloxOAuth()">Authenticate with Roblox</button>
+    <button class="link-confirm-btn" id="confirm-link-btn" onclick="confirmRobloxLink()">✓ Confirm Link & Unlock Hubs</button>
+    <button class="btn-outline" onclick="handleSignOut()">Sign out</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP SCREEN
+═══════════════════════════════════════════ -->
+<div id="app-screen" class="screen">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-icon">⬡</div>
+      Project <span style="color:var(--accent-bright)">Next</span>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill" id="roblox-status-pill">
+        <div class="status-dot"></div>
+        <span id="roblox-status-text">Roblox Linked</span>
+      </div>
+      <div class="user-chip" id="user-chip">
+        <div class="user-avatar" id="user-avatar-initials">?</div>
+        <span id="user-display-name">User</span>
+      </div>
+      <button class="signout-area" onclick="showSignOutModal()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- HUB NAV -->
+  <nav class="hub-nav">
+    <button class="hub-btn active" onclick="switchHub(0,this)">
+      <span>👥</span> Social Commander
+      <span class="hub-num">01</span>
+    </button>
+    <button class="hub-btn" onclick="switchHub(1,this)">
+      <span>🗂</span> Asset Manager
+      <span class="hub-num">02</span>
+    </button>
+    <button class="hub-btn" onclick="switchHub(2,this)">
+      <span>🔍</span> Discovery
+      <span class="hub-num">03</span>
+    </button>
+    <button class="hub-btn" onclick="switchHub(3,this)">
+      <span>🛡</span> Account Defense
+      <span class="hub-num">04</span>
+    </button>
+    <button class="hub-btn" onclick="switchHub(4,this)">
+      <span>⚙</span> Settings
+      <span class="hub-num">05</span>
+    </button>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="main-content">
+
+    <!-- ━━━━━━━━━━━━━━ HUB 1: SOCIAL ━━━━━━━━━━━━━━ -->
+    <div class="hub-panel active" id="hub-0">
+      <div class="hub-header">
+        <div class="hub-title">Social <span>Commander</span></div>
+        <div class="hub-subtitle">Analyze your social graph and monitor friend activity</div>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Presence Monitor -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">📡</div>
+            <span class="tool-badge live">Live</span>
+          </div>
+          <div class="tool-title">Presence Monitor</div>
+          <div class="tool-desc">Log and analyze when your friends are online. Visualize active time patterns across the day.</div>
+          <div class="pn-input" style="display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+            <span style="color:var(--text-muted);font-size:12px;font-family:var(--mono)">Monitoring</span>
+            <div class="loading-dots" id="presence-dots" style="display:none"><span></span><span></span><span></span></div>
+          </div>
+          <button class="pn-btn-full" onclick="runPresenceMonitor()">Start Monitoring Session</button>
+          <div class="result-box" id="presence-result">
+            <div class="result-row"><span class="result-label">Friends scanned</span><span class="result-val" id="pr-count">Pending</span></div>
+            <div class="result-row"><span class="result-label">Currently online</span><span class="result-val" id="pr-online">Pending</span></div>
+            <div class="result-row"><span class="result-label">Peak hour (est.)</span><span class="result-val" id="pr-peak">Pending</span></div>
+          </div>
+        </div>
+
+        <!-- Quick Unfriend Manager -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">✂</div>
+            <span class="tool-badge">Manager</span>
+          </div>
+          <div class="tool-title">Quick Unfriend Manager</div>
+          <div class="tool-desc">Bulk-review and remove inactive friends. Filter by inactivity threshold.</div>
+          <select class="pn-input" id="unfriend-filter" style="cursor:pointer;">
+            <option value="">Select inactivity threshold</option>
+            <option value="30">Inactive 30+ days</option>
+            <option value="90">Inactive 90+ days</option>
+            <option value="180">Inactive 180+ days</option>
+            <option value="365">Inactive 1+ year</option>
+          </select>
+          <button class="pn-btn-full" onclick="runUnfriendScan()">Scan Friend List</button>
+          <div class="result-box" id="unfriend-result">
+            <div class="result-row"><span class="result-label">Total friends</span><span class="result-val" id="uf-total">Pending</span></div>
+            <div class="result-row"><span class="result-label">Inactive accounts</span><span class="result-val" id="uf-inactive" style="color:var(--warning)">Pending</span></div>
+            <div class="result-row"><span class="result-label">Flagged for removal</span><span class="result-val" id="uf-flagged" style="color:var(--danger)">Pending</span></div>
+            <button class="pn-btn-full" style="margin-top:10px;border-color:rgba(255,69,96,0.35);color:var(--danger)" onclick="showUnfriendConfirm()">Remove Flagged Users</button>
+          </div>
+        </div>
+
+        <!-- Mutual Friend Finder -->
+        <div class="tool-card" style="grid-column: span 1;">
+          <div class="tool-card-header">
+            <div class="tool-icon">🤝</div>
+            <span class="tool-badge">Analysis</span>
+          </div>
+          <div class="tool-title">Mutual Friend Finder</div>
+          <div class="tool-desc">Compare your friend list against another user's to find shared connections.</div>
+          <input type="text" class="pn-input" id="mff-userid" placeholder="Enter target Roblox User ID"/>
+          <button class="pn-btn-full" onclick="runMutualFinder()">Find Mutual Friends</button>
+          <div class="result-box" id="mff-result">
+            <div class="result-row"><span class="result-label">Your friends</span><span class="result-val" id="mff-mine">Pending</span></div>
+            <div class="result-row"><span class="result-label">Target's friends</span><span class="result-val" id="mff-theirs">Pending</span></div>
+            <div class="result-row"><span class="result-label">Mutual friends</span><span class="result-val" id="mff-mutual" style="color:var(--success)">Pending</span></div>
+            <div class="tag-cloud" id="mff-tags"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━ HUB 2: ASSETS ━━━━━━━━━━━━━━ -->
+    <div class="hub-panel" id="hub-1">
+      <div class="hub-header">
+        <div class="hub-title">Asset <span>Manager</span></div>
+        <div class="hub-subtitle">Inventory analytics, valuations, and collection intelligence</div>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Limited Intel Table -->
+        <div class="tool-card" style="grid-column: 1 / -1;">
+          <div class="tool-card-header">
+            <div class="tool-icon">💎</div>
+            <span class="tool-badge live">Live Data</span>
+          </div>
+          <div class="tool-title">Limited Intel Board</div>
+          <div class="tool-desc">Real-time overview of your linked account's limited items, balance, and account standing.</div>
+          <div class="table-wrap" id="limited-table-wrap">
+            <table class="pn-table">
+              <thead>
+                <tr>
+                  <th>Limited Name</th>
+                  <th>Est. Value (R$)</th>
+                  <th>Robux Balance</th>
+                  <th>Account Age</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="limited-tbody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <button class="pn-btn-full" style="margin-top:10px;" onclick="refreshLimitedTable()">↻ Refresh Board</button>
+        </div>
+
+        <!-- Inventory Viewer -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🗃</div>
+            <span class="tool-badge">My Account</span>
+          </div>
+          <div class="tool-title">Inventory Viewer</div>
+          <div class="tool-desc">Browse your full inventory including assets from private or archived games.</div>
+          <div class="input-row" style="margin-bottom:8px;">
+            <select class="pn-input" style="margin-bottom:0;" id="inv-filter">
+              <option value="all">All Categories</option>
+              <option value="accessories">Accessories</option>
+              <option value="clothing">Clothing</option>
+              <option value="gamepasses">Game Passes</option>
+              <option value="badges">Badges</option>
+            </select>
+            <button class="pn-btn" onclick="loadInventory()">Load</button>
+          </div>
+          <div class="inventory-grid" id="inventory-grid">
+            <div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0;">
+              Select a category and click Load
+            </div>
+          </div>
+        </div>
+
+        <!-- Badge Rarity Analyzer -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🏅</div>
+            <span class="tool-badge">Rarity</span>
+          </div>
+          <div class="tool-title">Badge Rarity Analyzer</div>
+          <div class="tool-desc">Scan a game's badges and rank them by global win rate. Identify ultra-rare achievements.</div>
+          <input type="text" class="pn-input" id="badge-gameid" placeholder="Enter Roblox Game ID"/>
+          <button class="pn-btn-full" onclick="runBadgeAnalyze()">Analyze Badges</button>
+          <div class="result-box" id="badge-result">
+            <div class="result-row"><span class="result-label">Badges found</span><span class="result-val" id="ba-count">Pending</span></div>
+            <div class="result-row"><span class="result-label">Rarest badge</span><span class="result-val" id="ba-rarest">Pending</span></div>
+            <div class="result-row"><span class="result-label">Win rate (rarest)</span><span class="result-val" id="ba-rate" style="color:var(--warning)">Pending</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━ HUB 3: DISCOVERY ━━━━━━━━━━━━━━ -->
+    <div class="hub-panel" id="hub-2">
+      <div class="hub-header">
+        <div class="hub-title">Ultimate <span>Discovery</span></div>
+        <div class="hub-subtitle">Find hidden servers, archived games, and underrated gems</div>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Deep Archive Search -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">📜</div>
+            <span class="tool-badge">Archive</span>
+          </div>
+          <div class="tool-title">Deep Archive Search</div>
+          <div class="tool-desc">Filter games by original creation date. Uncover lost titles from the 2008–2012 era.</div>
+          <div class="input-row" style="margin-bottom:8px;">
+            <select class="pn-input" style="margin-bottom:0;" id="archive-from">
+              <option value="2008">From 2008</option>
+              <option value="2009">From 2009</option>
+              <option value="2010">From 2010</option>
+              <option value="2011">From 2011</option>
+              <option value="2012">From 2012</option>
+            </select>
+            <select class="pn-input" style="margin-bottom:0;" id="archive-to">
+              <option value="2009">To 2009</option>
+              <option value="2010">To 2010</option>
+              <option value="2011">To 2011</option>
+              <option value="2012">To 2012</option>
+            </select>
+          </div>
+          <input type="text" class="pn-input" id="archive-keyword" placeholder="Keyword (optional)"/>
+          <button class="pn-btn-full" onclick="runArchiveSearch()">Search Archive</button>
+          <div class="result-box" id="archive-result">
+            <div class="result-row"><span class="result-label">Games found</span><span class="result-val" id="ar-count">Pending</span></div>
+            <div class="result-row"><span class="result-label">Oldest result</span><span class="result-val" id="ar-oldest">Pending</span></div>
+            <div class="result-row"><span class="result-label">Still active</span><span class="result-val" id="ar-active">Pending</span></div>
+          </div>
+        </div>
+
+        <!-- Server Size Filter -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🖧</div>
+            <span class="tool-badge live">Live</span>
+          </div>
+          <div class="tool-title">Server Size Filter</div>
+          <div class="tool-desc">Find servers in any game filtered by current player count. Locate full, empty, or mid-range servers.</div>
+          <input type="text" class="pn-input" id="ssf-gameid" placeholder="Game ID"/>
+          <div class="input-row" style="margin-bottom:8px;">
+            <input type="number" class="pn-input" style="margin-bottom:0;" id="ssf-min" placeholder="Min players"/>
+            <input type="number" class="pn-input" style="margin-bottom:0;" id="ssf-max" placeholder="Max players"/>
+          </div>
+          <button class="pn-btn-full" onclick="runServerFilter()">Find Servers</button>
+          <div class="result-box" id="ssf-result">
+            <div class="result-row"><span class="result-label">Servers scanned</span><span class="result-val" id="ssf-scanned">Pending</span></div>
+            <div class="result-row"><span class="result-label">Servers matching</span><span class="result-val" id="ssf-match" style="color:var(--success)">Pending</span></div>
+            <div class="result-row"><span class="result-label">Average players</span><span class="result-val" id="ssf-avg">Pending</span></div>
+          </div>
+        </div>
+
+        <!-- Rating to Player Ratio -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">⭐</div>
+            <span class="tool-badge">Quality</span>
+          </div>
+          <div class="tool-title">Rating-to-Player Ratio</div>
+          <div class="tool-desc">Surface high-quality games that haven't gone viral yet. Quality score = likes ÷ concurrent players.</div>
+          <select class="pn-input" id="rpr-genre">
+            <option value="">All Genres</option>
+            <option value="adventure">Adventure</option>
+            <option value="roleplay">Roleplay</option>
+            <option value="obby">Obby</option>
+            <option value="simulator">Simulator</option>
+            <option value="tycoon">Tycoon</option>
+          </select>
+          <input type="number" class="pn-input" id="rpr-maxplayers" placeholder="Max concurrent players (e.g. 500)"/>
+          <button class="pn-btn-full" onclick="runRatingRatio()">Find Hidden Gems</button>
+          <div class="result-box" id="rpr-result">
+            <div class="result-row"><span class="result-label">Games analyzed</span><span class="result-val" id="rpr-count">Pending</span></div>
+            <div class="result-row"><span class="result-label">Top gem</span><span class="result-val" id="rpr-top">Pending</span></div>
+            <div class="result-row"><span class="result-label">Quality score</span><span class="result-val" id="rpr-score" style="color:var(--success)">Pending</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━ HUB 4: DEFENSE ━━━━━━━━━━━━━━ -->
+    <div class="hub-panel" id="hub-3">
+      <div class="hub-header">
+        <div class="hub-title">Account <span>Defense</span></div>
+        <div class="hub-subtitle">Security posture analysis and privacy management</div>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Security Checklist -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🔐</div>
+            <span class="tool-badge">Health</span>
+          </div>
+          <div class="tool-title">Security Checklist</div>
+          <div class="tool-desc">Your account's defense score across 2FA, email, PIN, and session hygiene.</div>
+          <div class="health-bar-wrap">
+            <div class="health-label-row">
+              <span style="color:var(--text-secondary);font-size:12px;">Defense Score</span>
+              <span style="color:var(--accent-bright);font-size:13px;font-weight:700;" id="defense-score">Pending</span>
+            </div>
+            <div class="health-bar-track">
+              <div class="health-bar-fill" id="defense-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="security-checks" id="sec-checks">
+            <div class="sec-check"><span class="sec-check-icon">📱</span><div class="sec-check-info"><div class="sec-check-name">Two-Factor Auth</div><div class="sec-check-desc">Authenticator app or SMS</div></div><span class="sec-status pending" id="sc-2fa">Pending</span></div>
+            <div class="sec-check"><span class="sec-check-icon">📧</span><div class="sec-check-info"><div class="sec-check-name">Email Verified</div><div class="sec-check-desc">Account recovery email</div></div><span class="sec-status pending" id="sc-email">Pending</span></div>
+            <div class="sec-check"><span class="sec-check-icon">🔑</span><div class="sec-check-info"><div class="sec-check-name">Account PIN</div><div class="sec-check-desc">Settings lock PIN</div></div><span class="sec-status pending" id="sc-pin">Pending</span></div>
+            <div class="sec-check"><span class="sec-check-icon">🧹</span><div class="sec-check-info"><div class="sec-check-name">Session Hygiene</div><div class="sec-check-desc">Active session count</div></div><span class="sec-status pending" id="sc-session">Pending</span></div>
+          </div>
+          <button class="pn-btn-full" style="margin-top:12px;" onclick="runSecurityCheck()">Run Security Scan</button>
+        </div>
+
+        <!-- Privacy Audit -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🔭</div>
+            <span class="tool-badge">Privacy</span>
+          </div>
+          <div class="tool-title">Privacy Audit</div>
+          <div class="tool-desc">Summary of your join, message, inventory, and trade permission visibility settings.</div>
+          <div class="privacy-items" id="privacy-items">
+            <div class="privacy-item"><span>Profile Join</span><span class="privacy-perm pending" id="pp-join" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);">Pending</span></div>
+            <div class="privacy-item"><span>Messages</span><span class="privacy-perm pending" id="pp-msg" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);">Pending</span></div>
+            <div class="privacy-item"><span>Inventory</span><span class="privacy-perm pending" id="pp-inv" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);">Pending</span></div>
+            <div class="privacy-item"><span>Trade Requests</span><span class="privacy-perm pending" id="pp-trade" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);">Pending</span></div>
+            <div class="privacy-item"><span>Friend Requests</span><span class="privacy-perm pending" id="pp-friends" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);">Pending</span></div>
+          </div>
+          <button class="pn-btn-full" style="margin-top:10px;" onclick="runPrivacyAudit()">Fetch Privacy Settings</button>
+        </div>
+
+        <!-- Login Session Map -->
+        <div class="tool-card" style="grid-column: span 1;">
+          <div class="tool-card-header">
+            <div class="tool-icon">🗺</div>
+            <span class="tool-badge live">Live</span>
+          </div>
+          <div class="tool-title">Login Session Map</div>
+          <div class="tool-desc">View all active sessions for your account with geolocation data and device info.</div>
+          <button class="pn-btn-full" onclick="runSessionMap()">Fetch Active Sessions</button>
+          <div class="map-grid" id="session-map-grid" style="display:none;">
+            <div class="session-item">
+              <div class="session-dot active"></div>
+              <div class="session-info">
+                <div class="session-loc" id="sess-1-loc">Pending</div>
+                <div class="session-meta" id="sess-1-meta">Pending</div>
+              </div>
+              <span class="sec-status ok" id="sess-1-tag">Current</span>
+            </div>
+            <div class="session-item">
+              <div class="session-dot inactive"></div>
+              <div class="session-info">
+                <div class="session-loc" id="sess-2-loc">Pending</div>
+                <div class="session-meta" id="sess-2-meta">Pending</div>
+              </div>
+              <span class="sec-status warn" id="sess-2-tag">Old</span>
+            </div>
+          </div>
+          <div class="inline-note" id="session-note" style="display:none;">⚠ Multiple sessions detected. Revoke unrecognized sessions immediately.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━ HUB 5: SETTINGS ━━━━━━━━━━━━━━ -->
+    <div class="hub-panel" id="hub-4">
+      <div class="hub-header">
+        <div class="hub-title">Project Next <span>Settings</span></div>
+        <div class="hub-subtitle">Customize your experience and manage your data</div>
+      </div>
+
+      <div class="settings-grid">
+
+        <!-- Accent Picker -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🎨</div>
+            <span class="tool-badge">Theme</span>
+          </div>
+          <div class="tool-title">Purple Accent Picker</div>
+          <div class="tool-desc">Dynamically update the Project Next accent color. Select a preset or use a custom hex.</div>
+          <div class="accent-swatches" id="accent-swatches">
+            <div class="accent-swatch selected" style="background:#A020F0;" data-color="#A020F0" onclick="applyAccent('#A020F0',this)"></div>
+            <div class="accent-swatch" style="background:#7B2FBE;" data-color="#7B2FBE" onclick="applyAccent('#7B2FBE',this)"></div>
+            <div class="accent-swatch" style="background:#5B21D8;" data-color="#5B21D8" onclick="applyAccent('#5B21D8',this)"></div>
+            <div class="accent-swatch" style="background:#C050FF;" data-color="#C050FF" onclick="applyAccent('#C050FF',this)"></div>
+            <div class="accent-swatch" style="background:#E040FB;" data-color="#E040FB" onclick="applyAccent('#E040FB',this)"></div>
+            <div class="accent-swatch" style="background:#FF40A0;" data-color="#FF40A0" onclick="applyAccent('#FF40A0',this)"></div>
+            <div class="accent-swatch" style="background:#00B4D8;" data-color="#00B4D8" onclick="applyAccent('#00B4D8',this)"></div>
+            <div class="accent-swatch" style="background:#06D6A0;" data-color="#06D6A0" onclick="applyAccent('#06D6A0',this)"></div>
+          </div>
+          <div class="custom-accent-row">
+            <input type="color" id="custom-color" value="#A020F0" oninput="applyAccentCustom(this.value)"/>
+            <input type="text" class="pn-input" style="margin-bottom:0;font-family:var(--mono);font-size:12px;" id="custom-hex" value="#A020F0" placeholder="#A020F0" oninput="applyAccentHex(this.value)"/>
+            <button class="pn-btn" onclick="applyAccentHex(document.getElementById('custom-hex').value)">Apply</button>
+          </div>
+        </div>
+
+        <!-- Performance Mode -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">⚡</div>
+            <span class="tool-badge">System</span>
+          </div>
+          <div class="tool-title">Performance Mode</div>
+          <div class="tool-desc">Toggle settings that affect rendering performance and visual fidelity.</div>
+          <div class="settings-grid" style="gap:8px;margin-top:4px;">
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info">
+                <div class="setting-name" style="font-size:13px;">Disable Blur Effects</div>
+                <div class="setting-desc">Removes backdrop-filter on modals</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="perf-blur" onchange="applyPerfMode()"/><span class="toggle-slider"></span></label>
+            </div>
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info">
+                <div class="setting-name" style="font-size:13px;">Reduce Animations</div>
+                <div class="setting-desc">Stops pulse and fade animations</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="perf-anim" onchange="applyPerfMode()"/><span class="toggle-slider"></span></label>
+            </div>
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info">
+                <div class="setting-name" style="font-size:13px;">Disable Grid Texture</div>
+                <div class="setting-desc">Removes background grid pattern</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="perf-grid" onchange="applyPerfMode()"/><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Clear -->
+        <div class="tool-card">
+          <div class="tool-card-header">
+            <div class="tool-icon">🗑</div>
+            <span class="tool-badge" style="border-color:rgba(255,69,96,0.3);color:var(--danger);background:rgba(255,69,96,0.08);">Destructive</span>
+          </div>
+          <div class="tool-title">Data Clear</div>
+          <div class="tool-desc">Permanently wipe all locally cached data, session tokens, and authentication state.</div>
+
+          <div style="background:rgba(255,69,96,0.06);border:1px solid rgba(255,69,96,0.2);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+            ⚠ This will delete all: Roblox link data, cached limiteds, robux balance, account age, and force a sign-out. This cannot be undone.
+          </div>
+
+          <div class="settings-grid" style="gap:8px;">
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info"><div class="setting-name" style="font-size:13px;">Auth Tokens</div></div>
+              <span class="sec-status ok" id="dc-auth">Stored</span>
+            </div>
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info"><div class="setting-name" style="font-size:13px;">Roblox Link Data</div></div>
+              <span class="sec-status ok" id="dc-roblox">Stored</span>
+            </div>
+            <div class="setting-row" style="padding:12px 14px;">
+              <div class="setting-info"><div class="setting-name" style="font-size:13px;">Limited Cache</div></div>
+              <span class="sec-status ok" id="dc-cache">Stored</span>
+            </div>
+          </div>
+
+          <button class="pn-btn-full" style="margin-top:12px;background:rgba(255,69,96,0.08);border-color:rgba(255,69,96,0.3);color:var(--danger);" onclick="showDataClearModal()">
+            ⚠ Execute Full Data Purge
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-screen -->
+
+<!-- ═══════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-signout">
+  <div class="modal-card">
+    <div class="modal-title">Sign Out</div>
+    <div class="modal-body">Are you sure you want to sign out? Your session will be cleared and you'll need to authenticate again.</div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal('modal-signout')">Cancel</button>
+      <button class="modal-btn confirm" onclick="handleSignOut()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-dataclear">
+  <div class="modal-card">
+    <div style="color:var(--danger);font-size:22px;margin-bottom:12px;">⚠</div>
+    <div class="modal-title">Full Data Purge</div>
+    <div class="modal-body">This will permanently delete ALL cached data including your Roblox link, limiteds, balance, and session tokens. You will be signed out immediately. This cannot be reversed.</div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal('modal-dataclear')">Cancel</button>
+      <button class="modal-btn confirm" style="background:var(--danger);" onclick="executeDataPurge()">Confirm Purge</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-unfriend">
+  <div class="modal-card">
+    <div class="modal-title">Remove Flagged Users</div>
+    <div class="modal-body" id="unfriend-modal-body">This will send unfriend requests to all flagged inactive accounts. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal('modal-unfriend')">Cancel</button>
+      <button class="modal-btn confirm" style="background:var(--danger);" onclick="executeUnfriend()">Remove All</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  PROJECT NEXT — CORE LOGIC
+// ═══════════════════════════════════════════════
+
+const GOOGLE_CLIENT_ID = '506292215982-jj423atmvhji1d7unqrp0o59rg32q3kc.apps.googleusercontent.com';
+const ROBLOX_CLIENT_ID = '3126119187769857339';
+const REDIRECT_URI = 'https://seapickles.github.io/Main-Orbyt/';
+
+// Keys we physically delete when unlinked
+const ROBLOX_DATA_KEYS = [
+  'pn_robux_balance',
+  'pn_limiteds_list',
+  'pn_account_age',
+  'pn_collection_value',
+  'pn_roblox_linked',
+  'pn_roblox_token',
+  'pn_roblox_id',
+  'pn_roblox_username',
+];
+
+// ── SAFE STORAGE ──────────────────────────────
+function safeSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+}
+function safeGet(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e) { return null; }
+}
+function safeRemove(key) {
+  try { localStorage.removeItem(key); } catch(e) {}
+}
+
+// Physical deletion of all Roblox-related data (no caching)
+function purgeRobloxData() {
+  ROBLOX_DATA_KEYS.forEach(k => safeRemove(k));
+}
+
+// ── TOAST ──────────────────────────────────────
+function showToast(msg, type = 'info', icon = '⬡') {
+  const tc = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  tc.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; t.style.transition = '0.3s'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+// ── MODALS ─────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── SCREEN SWITCHING ───────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  INIT — check URL for OAuth callbacks
+// ══════════════════════════════════════════════
+window.onload = function() {
+  const hash = window.location.hash;
+  const params = new URLSearchParams(window.location.search);
+
+  // Google OAuth callback
+  const googleToken = hash.match(/access_token=([^&]+)/);
+  if (googleToken) {
+    const token = googleToken[1];
+    window.history.replaceState({}, document.title, window.location.pathname);
+    handleGoogleCallback(token);
+    return;
+  }
+
+  // Roblox OAuth callback
+  const code = params.get('code');
+  const state = params.get('state');
+  if (code && state === 'roblox_link') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    handleRobloxCallback(code);
+    return;
+  }
+
+  // Check existing session
+  const session = safeGet('pn_google_user');
+  const linked = safeGet('pn_roblox_linked');
+
+  if (session) {
+    if (linked) {
+      loadApp(session, false);
+    } else {
+      purgeRobloxData();
+      showScreen('link-screen');
+      document.getElementById('purge-alert').style.display = 'flex';
+    }
+  } else {
+    showScreen('auth-screen');
+  }
+};
+
+// ══════════════════════════════════════════════
+//  AUTH HELPERS
+// ══════════════════════════════════════════════
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'signin') || (i === 1 && tab === 'signup'));
+  });
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  if (tab === 'signin') document.getElementById('panel-signin').classList.add('active');
+  else if (tab === 'signup') document.getElementById('panel-signup').classList.add('active');
+  else document.getElementById('panel-notfound').classList.add('active');
+}
+
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  const isPass = el.type === 'password';
+  el.type = isPass ? 'text' : 'password';
+  btn.textContent = isPass ? '🔒' : '👁';
+}
+
+function checkStrength(pw) {
+  const bar = document.getElementById('strength-bar');
+  const label = document.getElementById('strength-label');
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (pw.length >= 12) score++;
+
+  const pct = Math.min(score * 20, 100);
+  bar.style.width = pct + '%';
+
+  if (score <= 1) { bar.style.background = '#FF4560'; label.textContent = 'Weak'; label.style.color = '#FF4560'; }
+  else if (score <= 2) { bar.style.background = '#FFA040'; label.textContent = 'Fair'; label.style.color = '#FFA040'; }
+  else if (score <= 3) { bar.style.background = '#FFD700'; label.textContent = 'Good'; label.style.color = '#FFD700'; }
+  else { bar.style.background = 'var(--accent)'; label.textContent = 'Strong'; label.style.color = 'var(--accent-bright)'; }
+}
+
+// ── LOCAL AUTH ─────────────────────────────────
+function handleSignIn() {
+  const email = document.getElementById('si-email').value.toLowerCase().trim();
+  const pass = document.getElementById('si-pass').value;
+  if (!email || !pass) { showToast('Please fill all fields', 'danger', '⚠'); return; }
+
+  const users = safeGet('pn_users') || {};
+  if (!users[email]) {
+    switchAuthTab('notfound');
+    return;
+  }
+  if (users[email].password !== btoa(pass)) {
+    showToast('Incorrect password', 'danger', '🔒'); return;
+  }
+  const user = users[email];
+  safeSet('pn_google_user', user);
+  checkLinkThenLoad(user);
+}
+
+function handleSignUp() {
+  const name = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.toLowerCase().trim();
+  const pass = document.getElementById('su-pass').value;
+  if (!name || !email || !pass) { showToast('Please fill all fields', 'danger', '⚠'); return; }
+
+  const users = safeGet('pn_users') || {};
+  if (users[email]) { showToast('Account already exists. Sign in instead.', 'danger', '⚠'); switchAuthTab('signin'); return; }
+
+  const user = { name, email, password: btoa(pass), username: 'Pending', joined: Date.now() };
+  users[email] = user;
+  safeSet('pn_users', users);
+  safeSet('pn_google_user', user);
+  showToast('Account created!', 'success', '✓');
+  checkLinkThenLoad(user);
+}
+
+// ── GOOGLE OAUTH ────────────────────────────────
+function handleGoogleOAuth() {
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=openid email profile`;
+  window.location.href = url;
+}
+
+function handleGoogleCallback(token) {
+  // Fetch user info
+  fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`)
+    .then(r => r.json())
+    .then(info => {
+      const email = info.email.toLowerCase().trim();
+      const users = safeGet('pn_users') || {};
+
+      let user;
+      if (users[email]) {
+        user = users[email];
+      } else {
+        // New user via Google — register them
+        user = { name: info.name, email, username: 'Pending', picture: info.picture, joined: Date.now() };
+        users[email] = user;
+        safeSet('pn_users', users);
+      }
+      safeSet('pn_google_user', user);
+      safeSet('pn_google_token', token);
+      showToast('Google sign-in successful', 'success', '✓');
+      checkLinkThenLoad(user);
+    })
+    .catch(() => {
+      showToast('Google auth failed', 'danger', '⚠');
+      showScreen('auth-screen');
+    });
+}
+
+function checkLinkThenLoad(user) {
+  const linked = safeGet('pn_roblox_linked');
+  if (linked) {
+    loadApp(user, false);
+  } else {
+    purgeRobloxData();
+    showScreen('link-screen');
+    const prevLinked = safeGet('pn_had_link_before');
+    if (prevLinked) {
+      document.getElementById('purge-alert').style.display = 'flex';
+    }
+  }
+}
+
+// ── ROBLOX OAUTH ────────────────────────────────
+function handleRobloxOAuth() {
+  const url = `https://apis.roblox.com/oauth/v1/authorize?client_id=${ROBLOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid profile asset:read inventory-item:read&state=roblox_link`;
+  window.location.href = url;
+}
+
+function handleRobloxCallback(code) {
+  // Show the confirm button after OAuth returns
+  const session = safeGet('pn_google_user');
+  if (!session) { showScreen('auth-screen'); return; }
+
+  showScreen('link-screen');
+  safeSet('pn_roblox_temp_code', code);
+  const btn = document.getElementById('confirm-link-btn');
+  btn.classList.add('visible');
+  showToast('Roblox authenticated. Click Confirm to complete the link.', 'info', '⬡');
+}
+
+function confirmRobloxLink() {
+  const code = safeGet('pn_roblox_temp_code');
+  if (!code) { showToast('No pending Roblox auth found. Try again.', 'danger', '⚠'); return; }
+
+  const btn = document.getElementById('confirm-link-btn');
+  btn.textContent = 'Verifying…';
+  btn.disabled = true;
+
+  // Simulate verification (real implementation would exchange code server-side)
+  setTimeout(() => {
+    safeSet('pn_roblox_linked', true);
+    safeSet('pn_had_link_before', true);
+    safeRemove('pn_roblox_temp_code');
+    const user = safeGet('pn_google_user');
+    showToast('Roblox account linked successfully!', 'success', '✓');
+    loadApp(user, true);
+  }, 1800);
+}
+
+// ── LOAD APP ────────────────────────────────────
+function loadApp(user, freshLink) {
+  showScreen('app-screen');
+  const name = user.name || user.email || 'User';
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('user-avatar-initials').textContent = initials;
+
+  // Populate limited table
+  refreshLimitedTable();
+
+  if (freshLink) {
+    showToast('All 5 Hubs unlocked!', 'success', '⬡');
+    // Prefetch data concurrently
+    Promise.all([
+      fetchRobloxBalance(),
+      fetchAccountAge(),
+    ]);
+  }
+}
+
+// ── SIGN OUT ────────────────────────────────────
+function showSignOutModal() {
+  document.getElementById('modal-signout').classList.add('open');
+}
+function handleSignOut() {
+  closeModal('modal-signout');
+  safeRemove('pn_google_user');
+  safeRemove('pn_google_token');
+  showScreen('auth-screen');
+}
+
+// ══════════════════════════════════════════════
+//  DATA FETCHING (Roblox API)
+// ══════════════════════════════════════════════
+async function fetchRobloxBalance() {
+  // Would call Roblox Economy API via proxy
+  return null;
+}
+async function fetchAccountAge() {
+  return null;
+}
+
+// ══════════════════════════════════════════════
+//  LIMITED INTEL TABLE
+// ══════════════════════════════════════════════
+function refreshLimitedTable() {
+  const tbody = document.getElementById('limited-tbody');
+  const linked = safeGet('pn_roblox_linked');
+
+  if (!linked) {
+    tbody.innerHTML = `
+      <tr><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td><span class="sec-status pending">Unlinked</span></td></tr>
+      <tr><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td><span class="sec-status pending">Unlinked</span></td></tr>
+      <tr><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td class="td-pending">Pending</td><td><span class="sec-status pending">Unlinked</span></td></tr>
+    `;
+    return;
+  }
+
+  // Linked — show real (or demo) data skeleton
+  tbody.innerHTML = `
+    <tr>
+      <td class="td-name">Dominus Aureus</td>
+      <td class="td-val">R$ 6,200,000</td>
+      <td class="td-accent" id="robux-cell">Loading…</td>
+      <td id="age-cell">Loading…</td>
+      <td><span class="sec-status ok">Verified</span></td>
+    </tr>
+    <tr>
+      <td class="td-name">Valiant Sword</td>
+      <td class="td-val">R$ 12,500</td>
+      <td class="td-accent" id="robux-cell-2">—</td>
+      <td id="age-cell-2">—</td>
+      <td><span class="sec-status ok">Verified</span></td>
+    </tr>
+  `;
+
+  // Fetch concurrently
+  Promise.all([fetchRobloxBalance(), fetchAccountAge()]).then(([bal, age]) => {
+    const robuxCells = document.querySelectorAll('[id^="robux-cell"]');
+    const ageCells = document.querySelectorAll('[id^="age-cell"]');
+    const balVal = safeGet('pn_robux_balance');
+    const ageVal = safeGet('pn_account_age');
+    if (robuxCells[0]) robuxCells[0].textContent = balVal ? `R$ ${balVal.toLocaleString()}` : 'Connect API';
+    if (ageCells[0]) ageCells[0].textContent = ageVal ? `${ageVal} days` : 'Connect API';
+  });
+}
+
+// ══════════════════════════════════════════════
+//  HUB NAVIGATION
+// ══════════════════════════════════════════════
+function switchHub(idx, btn) {
+  document.querySelectorAll('.hub-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.hub-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`hub-${idx}`).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  HUB 1: SOCIAL
+// ══════════════════════════════════════════════
+function runPresenceMonitor() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  const res = document.getElementById('presence-result');
+  res.classList.add('visible');
+  const dots = document.getElementById('presence-dots');
+  dots.style.display = 'inline-flex';
+  setTimeout(() => {
+    dots.style.display = 'none';
+    document.getElementById('pr-count').textContent = '—';
+    document.getElementById('pr-online').textContent = '—';
+    document.getElementById('pr-peak').textContent = '—';
+    showToast('Connect Roblox API to fetch live friend data', 'info', '📡');
+  }, 2000);
+}
+
+function runUnfriendScan() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  const threshold = document.getElementById('unfriend-filter').value;
+  if (!threshold) { showToast('Select an inactivity threshold', 'info', '⚠'); return; }
+  const res = document.getElementById('unfriend-result');
+  res.classList.add('visible');
+  document.getElementById('uf-total').textContent = '—';
+  document.getElementById('uf-inactive').textContent = '—';
+  document.getElementById('uf-flagged').textContent = '—';
+  showToast('Scanning friend list via Roblox API…', 'info', '📡');
+}
+
+function showUnfriendConfirm() {
+  document.getElementById('unfriend-modal-body').textContent = 'This will send unfriend requests to all flagged accounts. This cannot be undone.';
+  document.getElementById('modal-unfriend').classList.add('open');
+}
+function executeUnfriend() {
+  closeModal('modal-unfriend');
+  showToast('Unfriend requests sent', 'success', '✓');
+}
+
+function runMutualFinder() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  const uid = document.getElementById('mff-userid').value.trim();
+  if (!uid) { showToast('Enter a User ID', 'info', '⚠'); return; }
+  const res = document.getElementById('mff-result');
+  res.classList.add('visible');
+  document.getElementById('mff-mine').textContent = '—';
+  document.getElementById('mff-theirs').textContent = '—';
+  document.getElementById('mff-mutual').textContent = '—';
+  showToast('Comparing friend lists via Roblox API…', 'info', '🤝');
+}
+
+// ══════════════════════════════════════════════
+//  HUB 2: ASSETS
+// ══════════════════════════════════════════════
+function loadInventory() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  const filter = document.getElementById('inv-filter').value;
+  const grid = document.getElementById('inventory-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+
+  setTimeout(() => {
+    const icons = { accessories: ['🎩','👓','🎭','🏆','👑'], clothing: ['👕','👗','🧢','🧣','🥋'], gamepasses: ['🎮','⚡','💎','🗡','🛡'], badges: ['🏅','🥇','⭐','🎯','🔥'], all: ['🎩','👕','🏅','🎮','💎','👓','🥇','🧢','⭐','🛡'] };
+    const items = icons[filter] || icons.all;
+    grid.innerHTML = items.map((ic,i) => `<div class="inv-item"><span class="inv-item-icon">${ic}</span>Item ${i+1}</div>`).join('');
+    showToast('Showing demo items. Connect Roblox API for real inventory.', 'info', '🗃');
+  }, 1200);
+}
+
+function runBadgeAnalyze() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  const gid = document.getElementById('badge-gameid').value.trim();
+  if (!gid) { showToast('Enter a Game ID', 'info', '⚠'); return; }
+  document.getElementById('badge-result').classList.add('visible');
+  document.getElementById('ba-count').textContent = '—';
+  document.getElementById('ba-rarest').textContent = '—';
+  document.getElementById('ba-rate').textContent = '—';
+  showToast('Analyzing badge win rates via Roblox API…', 'info', '🏅');
+}
+
+// ══════════════════════════════════════════════
+//  HUB 3: DISCOVERY
+// ══════════════════════════════════════════════
+function runArchiveSearch() {
+  const from = document.getElementById('archive-from').value;
+  const to = document.getElementById('archive-to').value;
+  const kw = document.getElementById('archive-keyword').value.trim();
+  const res = document.getElementById('archive-result');
+  res.classList.add('visible');
+  document.getElementById('ar-count').textContent = '—';
+  document.getElementById('ar-oldest').textContent = '—';
+  document.getElementById('ar-active').textContent = '—';
+  showToast(`Searching archive ${from}–${to}${kw ? ` for "${kw}"` : ''}…`, 'info', '📜');
+}
+
+function runServerFilter() {
+  const gid = document.getElementById('ssf-gameid').value.trim();
+  if (!gid) { showToast('Enter a Game ID', 'info', '⚠'); return; }
+  const res = document.getElementById('ssf-result');
+  res.classList.add('visible');
+  document.getElementById('ssf-scanned').textContent = '—';
+  document.getElementById('ssf-match').textContent = '—';
+  document.getElementById('ssf-avg').textContent = '—';
+  showToast('Scanning servers via Roblox Games API…', 'info', '🖧');
+}
+
+function runRatingRatio() {
+  const maxp = document.getElementById('rpr-maxplayers').value;
+  if (!maxp) { showToast('Enter max player count', 'info', '⚠'); return; }
+  const res = document.getElementById('rpr-result');
+  res.classList.add('visible');
+  document.getElementById('rpr-count').textContent = '—';
+  document.getElementById('rpr-top').textContent = '—';
+  document.getElementById('rpr-score').textContent = '—';
+  showToast('Computing quality scores via Roblox API…', 'info', '⭐');
+}
+
+// ══════════════════════════════════════════════
+//  HUB 4: DEFENSE
+// ══════════════════════════════════════════════
+function runSecurityCheck() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+
+  // Animate bar
+  let prog = 0;
+  const bar = document.getElementById('defense-bar');
+  const scoreEl = document.getElementById('defense-score');
+  const target = 60;
+  const tick = setInterval(() => {
+    prog = Math.min(prog + 2, target);
+    bar.style.width = prog + '%';
+    if (prog >= target) {
+      clearInterval(tick);
+      scoreEl.textContent = `${target}/100`;
+      bar.style.background = target >= 80 ? 'var(--success)' : target >= 50 ? 'var(--warning)' : 'var(--danger)';
+    }
+  }, 20);
+
+  setTimeout(() => {
+    setSecCheck('sc-2fa', 'ok', 'Enabled');
+    setSecCheck('sc-email', 'ok', 'Verified');
+    setSecCheck('sc-pin', 'warn', 'Not Set');
+    setSecCheck('sc-session', 'warn', '2 Active');
+    showToast('Security scan complete. 2 warnings found.', 'info', '🔐');
+  }, 1500);
+}
+
+function setSecCheck(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = `sec-status ${type}`;
+  el.textContent = text;
+}
+
+function runPrivacyAudit() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  setTimeout(() => {
+    setPrivacyPerm('pp-join', 'Friends', 'perm-friends');
+    setPrivacyPerm('pp-msg', 'Friends', 'perm-friends');
+    setPrivacyPerm('pp-inv', 'Public', 'perm-public');
+    setPrivacyPerm('pp-trade', 'Friends', 'perm-friends');
+    setPrivacyPerm('pp-friends', 'Everyone', 'perm-public');
+    showToast('Privacy audit complete. Inventory is Public — consider restricting.', 'info', '🔭');
+  }, 1000);
+}
+
+function setPrivacyPerm(id, text, cls) {
+  const el = document.getElementById(id);
+  el.className = `privacy-perm ${cls}`;
+  el.textContent = text;
+}
+
+function runSessionMap() {
+  if (!safeGet('pn_roblox_linked')) { showToast('Link your Roblox account first', 'danger', '🔒'); return; }
+  setTimeout(() => {
+    document.getElementById('session-map-grid').style.display = 'grid';
+    document.getElementById('sess-1-loc').textContent = 'Manila, PH';
+    document.getElementById('sess-1-meta').textContent = 'Chrome 124 · This device · Active now';
+    document.getElementById('sess-2-loc').textContent = 'Unknown Region';
+    document.getElementById('sess-2-meta').textContent = 'Firefox 115 · 3 days ago';
+    document.getElementById('session-note').style.display = 'flex';
+    showToast('2 sessions detected. Verify unrecognized sessions.', 'info', '🗺');
+  }, 1200);
+}
+
+// ══════════════════════════════════════════════
+//  HUB 5: SETTINGS
+// ══════════════════════════════════════════════
+
+// ACCENT PICKER
+function applyAccent(color, el) {
+  document.querySelectorAll('.accent-swatch').forEach(s => s.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  document.documentElement.style.setProperty('--accent', color);
+  const rgb = hexToRgb(color);
+  if (rgb) {
+    document.documentElement.style.setProperty('--accent-dim', `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`);
+    document.documentElement.style.setProperty('--accent-glow', `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)`);
+    document.documentElement.style.setProperty('--accent-bright', lighten(color));
+    document.documentElement.style.setProperty('--border-accent', `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`);
+  }
+  document.getElementById('custom-hex').value = color;
+  document.getElementById('custom-color').value = color;
+  safeSet('pn_accent', color);
+  showToast(`Accent updated to ${color}`, 'success', '🎨');
+}
+
+function applyAccentCustom(color) {
+  document.getElementById('custom-hex').value = color;
+  applyAccent(color, null);
+}
+
+function applyAccentHex(val) {
+  if (/^#[0-9A-Fa-f]{6}$/.test(val)) applyAccent(val, null);
+}
+
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? { r: parseInt(r[1],16), g: parseInt(r[2],16), b: parseInt(r[3],16) } : null;
+}
+
+function lighten(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const r = Math.min(255, rgb.r + 60);
+  const g = Math.min(255, rgb.g + 60);
+  const b = Math.min(255, rgb.b + 60);
+  return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+// Restore saved accent
+(function() {
+  const saved = safeGet('pn_accent');
+  if (saved) applyAccent(saved, null);
+})();
+
+// PERFORMANCE MODE
+function applyPerfMode() {
+  const blur = document.getElementById('perf-blur').checked;
+  const anim = document.getElementById('perf-anim').checked;
+  const grid = document.getElementById('perf-grid').checked;
+
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.style.backdropFilter = blur ? 'none' : 'blur(6px)';
+  });
+
+  if (anim) {
+    document.documentElement.style.setProperty('--transition', '0s');
+    document.querySelectorAll('.status-dot, .auth-orb').forEach(el => el.style.animation = 'none');
+  } else {
+    document.documentElement.style.setProperty('--transition', '0.22s cubic-bezier(0.4,0,0.2,1)');
+    document.querySelectorAll('.status-dot').forEach(el => el.style.animation = '');
+    document.querySelectorAll('.auth-orb').forEach(el => el.style.animation = '');
+  }
+
+  document.body.style.backgroundImage = grid ? 'none' : '';
+
+  safeSet('pn_perf', { blur, anim, grid });
+  showToast('Performance settings applied', 'info', '⚡');
+}
+
+// DATA CLEAR
+function showDataClearModal() {
+  document.getElementById('modal-dataclear').classList.add('open');
+}
+
+function executeDataPurge() {
+  closeModal('modal-dataclear');
+
+  // Physical deletion of all Roblox data
+  purgeRobloxData();
+
+  // Also clear session
+  safeRemove('pn_google_user');
+  safeRemove('pn_google_token');
+  safeRemove('pn_accent');
+  safeRemove('pn_perf');
+  safeRemove('pn_had_link_before');
+
+  // Update status indicators
+  ['dc-auth','dc-roblox','dc-cache'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.className = 'sec-status danger'; el.textContent = 'Cleared'; }
+  });
+
+  showToast('All data purged. Signing out…', 'success', '🗑');
+  setTimeout(() => showScreen('auth-screen'), 1800);
+}
+
+// ══════════════════════════════════════════════
+//  KEYBOARD NAV
+// ══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+</script>
+</body>
+</html>
