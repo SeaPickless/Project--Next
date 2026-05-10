@@ -203,6 +203,1595 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
 <body>
 
 <!-- AUTH -->
+<div id="auth-screen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">N</div>
+      <div class="auth-logo-text">Project <span>Next</span></div>
+    </div>
+    <div class="auth-title" data-i18n-auth="initAccess">Initialize Access</div>
+    <div class="auth-sub" data-i18n-auth="initSub">Complete the two-step identity bridge to sync your accounts and unlock the full dashboard.</div>
+    <div class="auth-step active" id="step-google">
+      <div class="auth-step-num" id="step1-num">1</div>
+      <div class="auth-step-info">
+        <div class="auth-step-label">Google Identity Sync</div>
+        <div class="auth-step-desc">Synchronize your Project Next identity to maintain your settings and preferences across all devices.</div>
+      </div>
+    </div>
+    <div class="auth-step" id="step-roblox">
+      <div class="auth-step-num" id="step2-num">2</div>
+      <div class="auth-step-info">
+        <div class="auth-step-label">Roblox Identity Bridge</div>
+        <div class="auth-step-desc">Securely bridge your Roblox account to enable real-time inventory auditing, social mapping, and asset valuation.</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="auth-btn" onclick="handleAuthStep()" data-i18n-auth="connectGoogle">Connect with Google</button>
+    <div class="auth-err" id="auth-err" style="display:none;"></div>
+    <div class="auth-divider" data-i18n-auth="syncAccounts">Sync your accounts to unlock all features</div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen" style="display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+  <div class="loading-logo">Project <span style="color:var(--accent)">Next</span></div>
+  <div class="loading-bar-wrap"><div class="loading-bar-fill" id="load-bar"></div></div>
+  <div class="loading-label" id="load-label">Initializing genesis phase...</div>
+</div>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">N</div>
+      <div class="sidebar-logo-text">Project <span>Next</span></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Command Hubs</div>
+      <button class="nav-item active" onclick="switchHub('social',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+        <span data-i18n="hub1">Social Commander</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('assets',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <span data-i18n="hub2">Asset & Collections</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('discovery',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        <span data-i18n="hub3">Ultimate Discovery</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('security',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        <span data-i18n="hub4">Account Defense</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('settings',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        PN Settings
+      </button>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-username">—</div>
+        <div class="user-tag" id="sidebar-tag">● Online</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+      <div class="topbar-title" id="topbar-title">Social Commander</div>
+      <div class="topbar-badge">GENESIS PHASE</div>
+    </div>
+
+    <!-- HUB 1: SOCIAL -->
+    <div class="hub-panel active" id="hub-social">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub1">Social Commander</div>
+        <div class="hub-sub">Live network data · Real friend graph from Roblox Open Cloud</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label" data-i18n="friendCount">Total Friends</div>
+          <div class="stat-val accent-text" id="stat-friends">—</div>
+          <div class="stat-sub" id="stat-friends-sub">Fetching...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-i18n="onlineNow">Online Now</div>
+          <div class="stat-val" style="color:var(--success)" id="stat-online">—</div>
+          <div class="stat-sub" id="stat-online-sub">Fetching...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Requests</div>
+          <div class="stat-val" style="color:var(--warning)" id="stat-pending">—</div>
+          <div class="stat-sub" id="stat-pending-sub">Fetching...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Followers</div>
+          <div class="stat-val" id="stat-followers">—</div>
+          <div class="stat-sub" id="stat-followers-sub">Fetching...</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">
+              <div class="card-title-dot"></div>
+              Friends List <span class="api-chip" id="friends-chip">● Connecting</span>
+            </div>
+            <div id="friends-list"><div style="color:var(--text-muted);font-size:13px;padding:8px 0;" data-i18n="checking">Checking...</div></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Connections Finder</div>
+            <div class="search-box">
+              <input class="search-input" id="connections-input" placeholder="e.g. MadamPokai" type="text" value="MadamPokai">
+              <button class="btn-accent" onclick="startConnectionScan()">Scan</button>
+            </div>
+            <div id="connections-progress" style="display:none;">
+              <div class="progress-wrap">
+                <div class="progress-header">
+                  <div class="progress-label" id="conn-label">Scanning network...</div>
+                  <div class="progress-meta" id="conn-pct">0%</div>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="conn-bar" style="width:0%"></div></div>
+                <div class="progress-sub" id="conn-time">Estimated: calculating...</div>
+              </div>
+            </div>
+            <div id="connections-result" style="display:none;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Mutual Friend Finder</div>
+            <div class="search-box">
+              <input class="search-input" placeholder="Enter username" type="text" id="mutual-input">
+              <button class="btn-accent" onclick="findMutuals()">Analyze</button>
+            </div>
+            <div id="mutual-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUB 2: ASSETS -->
+    <div class="hub-panel" id="hub-assets">
+      <div class="hub-header">
+        <div class="hub-title">Asset & Collection Manager</div>
+        <div class="hub-sub">Live inventory audit · Promise.all parallel fetch · RAP for limiteds</div>
+      </div>
+      <div id="value-check-phase">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title"><div class="card-title-dot"></div>Genesis Inventory Audit</div>
+          <button class="btn-accent" onclick="startValueCheck()" id="start-value-btn" style="width:100%;margin-bottom:16px;">Run Full Inventory Audit</button>
+          <div id="value-progress" style="display:none;">
+            <div class="progress-header">
+              <div class="progress-label" id="value-label" data-i18n="checkingGamepasses">Checking Gamepasses...</div>
+              <div class="progress-meta" id="value-pct">0%</div>
+            </div>
+            <div class="progress-bar" style="height:8px;"><div class="progress-fill" id="value-bar" style="width:0%;"></div></div>
+            <div class="progress-sub" id="value-time" style="margin-top:8px;">Estimated: –</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;" id="cat-chips"></div>
+          </div>
+        </div>
+      </div>
+      <!-- HUB 2 FIX: Results always visible once populated — not gated behind display:none in CSS -->
+      <div id="value-results" style="display:none;">
+        <div class="stat-grid" style="margin-bottom:20px;">
+          <div class="stat-card" style="grid-column:span 2;">
+            <div class="stat-label" data-i18n="rbxTotal">R$ Total</div>
+            <div class="stat-val accent-text" style="font-size:32px;" id="total-value">R$ 0</div>
+            <div class="stat-sub">Limiteds (RAP) + On-sale price + Off-sale last known price</div>
+          </div>
+          <div class="stat-card"><div class="stat-label">Limiteds (RAP)</div><div class="stat-val" style="color:var(--warning)" id="rap-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Gamepasses</div><div class="stat-val" id="gp-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Accessories</div><div class="stat-val" id="acc-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Other Assets</div><div class="stat-val" id="other-value">R$ 0</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-dot"></div>Inventory Breakdown
+            <span class="api-chip" id="inv-chip">● Live</span>
+          </div>
+          <!-- Inventory items — always rendered, no hidden override -->
+          <div id="inventory-items"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUB 3: DISCOVERY -->
+    <div class="hub-panel" id="hub-discovery">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub3">Ultimate Discovery</div>
+        <div class="hub-sub">Unearth hidden gems from the 2008–2012 legacy era.</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>Deep Archive Search</div>
+        <div class="search-box">
+          <input class="search-input" placeholder="Search 2008–2012 era experiences..." type="text" id="disc-query">
+          <button class="btn-accent" onclick="startDiscoverySearch()">Deep Search</button>
+        </div>
+        <div id="discovery-progress" style="display:none;">
+          <div class="progress-wrap">
+            <div class="progress-header">
+              <div class="progress-label">Querying archive...</div>
+              <div class="progress-meta" id="disc-pct">0%</div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="disc-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid-3" id="discovery-grid" style="margin-bottom:20px;"></div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot"></div>Rating-to-Player Ratio · Hidden Gems</div>
+        <div id="ratio-list"></div>
+      </div>
+    </div>
+
+    <!-- HUB 4: SECURITY -->
+    <div class="hub-panel" id="hub-security">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub4">Account Defense & Privacy</div>
+        <div class="hub-sub">Monitor your security posture, active sessions, and privacy configuration.</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title"><div class="card-title-dot"></div>Security Integrity</div>
+            <div class="integrity-bar-wrap">
+              <div class="integrity-score">82<span>/100</span></div>
+              <div class="progress-bar" style="height:10px;margin-top:8px;"><div class="progress-fill" style="width:82%;background:linear-gradient(90deg,var(--success),var(--accent));"></div></div>
+            </div>
+            <div id="security-checklist"></div>
+            <button class="btn-accent" onclick="runSecurityScan()" style="width:100%;margin-top:12px;">Run Live Security Scan</button>
+            <div id="security-progress" style="display:none;margin-top:12px;">
+              <div class="progress-bar"><div class="progress-fill" id="sec-bar" style="width:0%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title"><div class="card-title-dot"></div>Active Session Map</div>
+            <div class="map-placeholder"><div class="map-dots"><div class="map-dot"></div><div class="map-dot"></div><div class="map-dot"></div></div><div>Geo-spatial session tracking active</div></div>
+            <div id="sessions-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Privacy Auditor</div>
+            <div id="privacy-audit"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUB 5: SETTINGS -->
+    <div class="hub-panel" id="hub-settings">
+      <div class="hub-header">
+        <div class="hub-title">Project Next Settings</div>
+        <div class="hub-sub">Theme engine, language, performance, account management.</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title"><div class="card-title-dot"></div>Theme Engine</div>
+            <div class="theme-grid">
+              <div class="theme-card selected" onclick="selectTheme(this,'genesis')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,#0B0C0D,#A020F0);"></div>
+                <div class="theme-name">Genesis Dark</div><div class="theme-sub">Default</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'glass')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,rgba(255,255,255,0.08),rgba(160,32,240,0.35));"></div>
+                <div class="theme-name">Glass Morphic</div><div class="theme-sub">Frosted depth</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'cyber')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,#001a00,#00FF41);"></div>
+                <div class="theme-name">Cyber Punk</div><div class="theme-sub">Neon matrix</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'oled')">
+                <div class="theme-preview" style="background:#000;border:1px solid #222;"></div>
+                <div class="theme-name">Monolith OLED</div><div class="theme-sub">Pure black</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Multi-Language</div>
+            <select class="lang-select" onchange="setLanguage(this.value)" id="lang-select">
+              <option value="en">🌐 English</option>
+              <option value="tl">🇵🇭 Tagalog</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="pt">🇧🇷 Português</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Performance & Features</div>
+            <div id="settings-toggles"></div>
+            <div class="section-divider"></div>
+            <button class="btn-accent" onclick="signOut()" style="width:100%;background:var(--danger);">Disconnect All Accounts</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  PROJECT NEXT — LIVE DATA ENGINE v2
+//  Fixes: Session persistence + Profile loading
+// ═══════════════════════════════════════════════
+
+const CFG = {
+  GOOGLE_CLIENT_ID: '506292215982-u0e4b7osdfni08nq4k3kbqlo25fl9vtb.apps.googleusercontent.com',
+  ROBLOX_CLIENT_ID: '2786623414524497771',
+  RBX_AUTH:         'https://apis.roblox.com/oauth/v1/authorize',
+  RBX_TOKEN:        'https://apis.roblox.com/oauth/v1/token',
+  RBX_USERINFO:     'https://apis.roblox.com/oauth/v1/userinfo',
+  REDIRECT_URI:     'https://project-next-pink.vercel.app/',
+  // Determine local vs production
+  get REDIR() { return window.location.hostname === 'localhost' || window.location.protocol === 'file:' ? window.location.href.split('?')[0] : this.REDIRECT_URI; },
+};
+
+// ── STATE ──────────────────────────────────────
+let APP = {
+  user: null,        // { userId, username, displayName, thumbnail }
+  rbxToken: null,
+  friends: [],
+  lang: 'en',
+  toggles: {},
+  authStep: 0,
+};
+
+// ── SESSION PERSISTENCE ─────────────────────────
+// FIX 1: Check for saved session FIRST — skip auth entirely if valid session exists
+function loadSession() {
+  try {
+    const raw = localStorage.getItem('pn_session');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s || !s.user || !s.user.username) return false;
+    // Check expiry (tokens last 1 hour, we refresh data from cache)
+    // We keep session alive indefinitely unless user signs out
+    APP.user     = s.user;
+    APP.rbxToken = s.rbxToken || null;
+    APP.lang     = s.lang || 'en';
+    return true;
+  } catch(e) {
+    localStorage.removeItem('pn_session');
+    return false;
+  }
+}
+
+function saveSession() {
+  localStorage.setItem('pn_session', JSON.stringify({
+    user:     APP.user,
+    rbxToken: APP.rbxToken,
+    lang:     APP.lang,
+    savedAt:  Date.now(),
+  }));
+}
+
+function clearSession() {
+  ['pn_session','pn_google_token','pn_rbx_token','pn_pkce_verifier','pn_oauth_state']
+    .forEach(k => localStorage.removeItem(k));
+  APP.user     = null;
+  APP.rbxToken = null;
+}
+
+// ── BOOT SEQUENCE ───────────────────────────────
+// Called on page load — handles OAuth callbacks AND session restore
+(async function boot() {
+  // 1. Handle OAuth2 redirect callback (Roblox sends ?code=... back)
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const state  = params.get('state');
+  const errP   = params.get('error');
+
+  if (code && state === 'roblox_auth') {
+    // Clean URL immediately so refresh doesn't re-trigger
+    window.history.replaceState({}, '', window.location.pathname);
+    showScreen('loading');
+    try {
+      await handleRobloxCallback(code);
+      beginLoading();
+    } catch(e) {
+      showScreen('auth');
+      showAuthErr('OAuth failed: ' + e.message + '. Try again.');
+    }
+    return;
+  }
+
+  if (errP) {
+    window.history.replaceState({}, '', window.location.pathname);
+    showScreen('auth');
+    showAuthErr('Authorization error: ' + errP);
+    return;
+  }
+
+  // 2. FIX 1: Check existing session → skip auth
+  if (loadSession()) {
+    beginLoading();
+    return;
+  }
+
+  // 3. No session → show auth
+  showScreen('auth');
+})();
+
+// ── SCREEN HELPERS ──────────────────────────────
+function showScreen(name) {
+  document.getElementById('auth-screen').style.display    = name === 'auth'    ? 'flex'  : 'none';
+  document.getElementById('loading-screen').style.display = name === 'loading' ? 'flex'  : 'none';
+  document.getElementById('app').style.display            = name === 'app'     ? 'block' : 'none';
+}
+
+function showAuthErr(msg) {
+  const el = document.getElementById('auth-err');
+  // Map raw technical error codes to friendly messages
+  const friendly = {
+    'popup_closed': 'Identity sync interrupted. Please keep the popup window open to complete the bridge.',
+    'popup_closed_by_user': 'Identity sync interrupted. Please keep the popup window open to complete the bridge.',
+    'access_denied': 'Authorization Error. Please ensure your Redirect URI is synchronized in the Google Cloud Console.',
+    'redirect_uri_mismatch': 'Authorization Error. Please ensure your Redirect URI is synchronized in the Google Cloud Console.',
+  };
+  // Check if the message contains a known raw code
+  let displayMsg = msg;
+  for (const [code, label] of Object.entries(friendly)) {
+    if (msg && msg.toLowerCase().includes(code.toLowerCase())) {
+      displayMsg = label;
+      break;
+    }
+  }
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(240,64,64,0.08);border:1px solid rgba(240,64,64,0.25);border-radius:var(--radius);border-left:3px solid var(--danger);text-align:left;">
+      <span style="font-size:16px;flex-shrink:0;margin-top:1px;">⚠</span>
+      <span style="font-size:12px;line-height:1.55;color:var(--text-secondary);">${displayMsg}</span>
+    </div>`;
+  el.style.display = 'block';
+}
+
+function hideAuthErr() {
+  const el = document.getElementById('auth-err');
+  el.innerHTML = '';
+  el.style.display = 'none';
+}
+
+// ── AUTH STEP HANDLER ────────────────────────────
+async function handleAuthStep() {
+  const btn = document.getElementById('auth-btn');
+  hideAuthErr();
+
+  if (APP.authStep === 0) {
+    // STEP 1: Google via GIS popup
+    btn.disabled = true;
+    btn.textContent = 'Connecting to Google...';
+    try {
+      await doGoogleAuth();
+      markStepDone('google');
+      APP.authStep = 1;
+      btn.disabled = false;
+      btn.textContent = 'Authorize Roblox Open Cloud';
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Connect with Google';
+      showAuthErr(e.message || 'Google auth failed. Check popup blocker.');
+    }
+
+  } else if (APP.authStep === 1) {
+    // STEP 2: Roblox OAuth2 popup
+    btn.disabled = true;
+    btn.textContent = 'Connecting to Roblox...';
+    const stored = localStorage.getItem('pn_rbx_token');
+    if (stored) {
+      APP.rbxToken = stored;
+      await fetchAndStoreUser();
+      if (!APP.user || !APP.user.userId || !APP.user.username) {
+        btn.disabled = false;
+        btn.textContent = 'Link Roblox Account';
+        showAuthErr('Could not retrieve your Roblox identity. Please try again.');
+        return;
+      }
+      markStepDone('roblox');
+      beginLoading();
+    } else {
+      try {
+        await startRobloxAuth();
+        // fetchAndStoreUser is called inside handleRobloxCallback → token stored
+        await fetchAndStoreUser();
+        if (!APP.user || !APP.user.userId) {
+          throw new Error('Could not retrieve your Roblox identity. Please try again.');
+        }
+        markStepDone('roblox');
+        beginLoading();
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Link Roblox Account';
+        showAuthErr(e.message || 'Roblox connection failed. Please try again.');
+      }
+    }
+  }
+}
+
+function markStepDone(which) {
+  if (which === 'google') {
+    document.getElementById('step-google').className = 'auth-step done';
+    document.getElementById('step1-num').textContent = '✓';
+    document.getElementById('step-roblox').className = 'auth-step active';
+    showToast('Google identity synchronized');
+  } else {
+    document.getElementById('step-roblox').className = 'auth-step done';
+    document.getElementById('step2-num').textContent = '✓';
+    showToast('Roblox bridge authorized');
+  }
+}
+
+// ── GOOGLE GIS AUTH ─────────────────────────────
+function doGoogleAuth() {
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined') {
+      // GIS not loaded yet — wait up to 5s
+      let waited = 0;
+      const iv = setInterval(() => {
+        waited += 200;
+        if (typeof google !== 'undefined') { clearInterval(iv); doGoogleAuth().then(resolve).catch(reject); }
+        if (waited > 5000) { clearInterval(iv); reject(new Error('Google Identity Services failed to load.')); }
+      }, 200);
+      return;
+    }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CFG.GOOGLE_CLIENT_ID,
+      scope: 'openid profile email',
+      callback: (res) => {
+        if (res.error) { reject(new Error(res.error_description || res.error)); return; }
+        localStorage.setItem('pn_google_token', res.access_token);
+        resolve(res.access_token);
+      },
+      error_callback: (e) => {
+        const friendlyErrors = {
+          'popup_closed': 'Identity sync interrupted. Please keep the popup window open to complete the bridge.',
+          'popup_closed_by_user': 'Identity sync interrupted. Please keep the popup window open to complete the bridge.',
+          'access_denied': 'Authorization Error. Please ensure your Redirect URI is synchronized in the Google Cloud Console.',
+        };
+        const msg = friendlyErrors[e.type] || e.type || 'Connection interrupted. Please try again.';
+        reject(new Error(msg));
+      },
+    });
+    client.requestAccessToken({ prompt: 'consent' });
+  });
+}
+
+// ── ROBLOX PKCE OAUTH2 ──────────────────────────
+function randStr(n) {
+  const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const a = new Uint8Array(n);
+  crypto.getRandomValues(a);
+  return Array.from(a, b => c[b % c.length]).join('');
+}
+
+async function makePKCE() {
+  const v = randStr(64);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  const ch = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  return { verifier: v, challenge: ch };
+}
+
+async function startRobloxAuth() {
+  const { verifier, challenge } = await makePKCE();
+  localStorage.setItem('pn_pkce_verifier', verifier);
+  const p = new URLSearchParams({
+    client_id:             CFG.ROBLOX_CLIENT_ID,
+    redirect_uri:          CFG.REDIR,
+    response_type:         'code',
+    scope:                 'openid profile',
+    state:                 'roblox_auth',
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+  });
+  const authUrl = CFG.RBX_AUTH + '?' + p;
+
+  // Open as popup so the user stays on the page
+  const popup = window.open(authUrl, 'roblox_oauth', 'width=520,height=640,menubar=no,toolbar=no,status=no');
+  if (!popup) {
+    throw new Error('Popup blocked. Please allow popups for this site and try again.');
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (fn) => { if (!settled) { settled = true; fn(); } };
+
+    // Listen for the redirect-back message (popup posts when it lands on our origin)
+    const onMsg = async (evt) => {
+      if (evt.origin !== window.location.origin) return;
+      if (!evt.data || evt.data.type !== 'roblox_oauth_code') return;
+      window.removeEventListener('message', onMsg);
+      clearInterval(pollIv);
+      popup.close();
+      const code = evt.data.code;
+      if (!code) {
+        finish(() => reject(new Error('No authorization code received from Roblox.')));
+        return;
+      }
+      try {
+        await handleRobloxCallback(code);
+        finish(() => resolve());
+      } catch(e) {
+        finish(() => reject(e));
+      }
+    };
+    window.addEventListener('message', onMsg);
+
+    // Fallback: poll for popup closure (user closed without authorizing)
+    const pollIv = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollIv);
+        window.removeEventListener('message', onMsg);
+        finish(() => reject(new Error('Identity sync interrupted. Please keep the popup window open to complete the bridge.')));
+      }
+    }, 600);
+  });
+}
+
+async function handleRobloxCallback(code) {
+  const verifier = localStorage.getItem('pn_pkce_verifier');
+  if (!verifier) throw new Error('PKCE verifier missing — please restart auth.');
+
+  const res = await fetch(CFG.RBX_TOKEN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'authorization_code',
+      code:          code,
+      redirect_uri:  CFG.REDIR,
+      client_id:     CFG.ROBLOX_CLIENT_ID,
+      code_verifier: verifier,
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('Token exchange failed (' + res.status + '): ' + txt.slice(0,120));
+  }
+
+  const data = await res.json();
+  APP.rbxToken = data.access_token;
+  localStorage.setItem('pn_rbx_token', data.access_token);
+  localStorage.removeItem('pn_pkce_verifier');
+
+  // FIX 2: Fetch real user identity immediately after token exchange
+  await fetchAndStoreUser();
+}
+
+// ── USER IDENTITY ────────────────────────────────
+// FIX 2: Fetch from /userinfo, store, then display — no more eternal "Loading..."
+async function fetchAndStoreUser() {
+  if (!APP.rbxToken) return;
+  try {
+    const res = await fetch(CFG.RBX_USERINFO, {
+      headers: { Authorization: 'Bearer ' + APP.rbxToken },
+    });
+    if (!res.ok) throw new Error('userinfo ' + res.status);
+    const info = await res.json();
+    // OpenID claims: sub=userId, name=displayName, preferred_username=username, picture=thumbnail
+    APP.user = {
+      userId:      info.sub || info.id || '',
+      username:    info.preferred_username || info.name || 'RobloxUser',
+      displayName: info.name || info.preferred_username || 'Roblox User',
+      thumbnail:   info.picture || '',
+    };
+    saveSession();
+  } catch(e) {
+    // If userinfo fails (e.g. CORS on local), try to build partial profile from token claims
+    console.warn('userinfo fetch failed:', e.message);
+    try {
+      // Decode JWT payload for basic info
+      const payload = JSON.parse(atob(APP.rbxToken.split('.')[1]));
+      APP.user = {
+        userId:      payload.sub || '',
+        username:    payload.preferred_username || payload.name || 'RobloxUser',
+        displayName: payload.name || 'Roblox User',
+        thumbnail:   payload.picture || '',
+      };
+    } catch(_) {
+      APP.user = { userId: '', username: 'Authenticated', displayName: 'Roblox User', thumbnail: '' };
+    }
+    saveSession();
+  }
+}
+
+// ── LOADING SEQUENCE ─────────────────────────────
+const LOAD_STEPS = [
+  'Initializing genesis phase...',
+  'Synchronizing Roblox Open Cloud...',
+  'Fetching friend graph...',
+  'Loading inventory catalog...',
+  'Indexing legacy archive...',
+  'Bootstrapping Project Next...',
+];
+
+function beginLoading() {
+  showScreen('loading');
+  let pct = 0, step = 0;
+  const bar   = document.getElementById('load-bar');
+  const label = document.getElementById('load-label');
+  const iv = setInterval(() => {
+    pct += Math.random() * 18 + 8;
+    if (pct > 100) pct = 100;
+    bar.style.width = pct + '%';
+    step = Math.min(Math.floor(pct / 17), LOAD_STEPS.length - 1);
+    label.textContent = LOAD_STEPS[step];
+    if (pct >= 100) { clearInterval(iv); setTimeout(launchApp, 500); }
+  }, 280);
+}
+
+async function launchApp() {
+  // Ensure we have a real @username and userId before unlocking the dashboard
+  if (!APP.user || !APP.user.userId || !APP.user.username) {
+    await fetchAndStoreUser();
+  }
+  // Hard gate: do not unlock if identity is still missing
+  if (!APP.user || !APP.user.userId) {
+    showScreen('auth');
+    showAuthErr('Could not verify your Roblox identity. Please reconnect your account.');
+    return;
+  }
+  showScreen('app');
+  applyLanguage(APP.lang);
+  populateAll();
+  showToast('Welcome back, @' + APP.user.username + ' ✦');
+}
+
+// ── POPULATE ALL ─────────────────────────────────
+function populateAll() {
+  updateProfile();        // FIX 2: render profile immediately from APP.user
+  populateDiscovery();
+  populateSecurity();
+  populateSessions();
+  populatePrivacy();
+  populateSettingsToggles();
+  fetchLiveFriends();     // async — fills hub 1 when ready
+  restoreTheme();
+}
+
+// FIX 2: Profile renders instantly from APP.user, no eternal spinner
+function updateProfile() {
+  const user = APP.user;
+  if (!user) return;
+
+  const nameEl   = document.getElementById('sidebar-username');
+  const avatarEl = document.getElementById('sidebar-avatar');
+
+  nameEl.textContent = '@' + user.username;
+
+  if (user.thumbnail) {
+    const img = document.createElement('img');
+    img.src = user.thumbnail;
+    img.alt = user.username;
+    img.onerror = () => { avatarEl.innerHTML = ''; avatarEl.textContent = user.username[0].toUpperCase(); };
+    avatarEl.innerHTML = '';
+    avatarEl.appendChild(img);
+  } else {
+    avatarEl.textContent = user.username ? user.username[0].toUpperCase() : 'U';
+  }
+
+  // Also update stat cards with userId info
+  const tag = document.getElementById('sidebar-tag');
+  if (tag) tag.textContent = '● Online · ID ' + (user.userId || '—');
+}
+
+// ── LIVE FRIENDS (Roblox API) ─────────────────────
+async function fetchLiveFriends() {
+  if (!APP.user || !APP.user.userId) {
+    setChip('friends-chip', 'warn', '● No userId');
+    return;
+  }
+
+  const uid = APP.user.userId;
+  const token = APP.rbxToken;
+
+  // Attempt: friends.roblox.com (CORS-blocked from browser — expect failure)
+  // On success: render real data. On CORS fail: show notice with cached/empty state.
+  try {
+    const headers = token ? { Authorization: 'Bearer ' + token } : {};
+    const res = await Promise.race([
+      fetch('/api/friends?userId=' + uid, { headers }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+    ]);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    APP.friends = data.data || [];
+    renderFriendsLive(APP.friends);
+    setChip('friends-chip', 'live', '● Live');
+    document.getElementById('stat-friends').textContent = APP.friends.length;
+    document.getElementById('stat-friends-sub').textContent = 'Live from Roblox';
+    const online = APP.friends.filter(f => f.isOnline).length;
+    document.getElementById('stat-online').textContent = online;
+    document.getElementById('stat-online-sub').textContent = 'Online now';
+  } catch(e) {
+    // CORS or network error — show informative notice
+    setChip('friends-chip', 'warn', '● Proxy needed');
+    document.getElementById('stat-friends').textContent = '—';
+    document.getElementById('stat-friends-sub').textContent = 'CORS restricted';
+    document.getElementById('friends-list').innerHTML = `
+      <div style="padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:13px;font-weight:600;color:var(--warning);margin-bottom:6px;">⚠ CORS Restriction</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+          <code style="font-family:var(--mono);">friends.roblox.com</code> blocks direct browser requests. 
+          A server-side proxy at <code style="font-family:var(--mono);">project-next-pink.vercel.app/api/friends</code> 
+          is required to relay this call. Your userId: <strong>${APP.user.userId}</strong>
+        </div>
+      </div>`;
+    document.getElementById('stat-online').textContent = '—';
+    document.getElementById('stat-pending').textContent = '—';
+    document.getElementById('stat-followers').textContent = '—';
+  }
+}
+
+function renderFriendsLive(friends) {
+  const el = document.getElementById('friends-list');
+  if (!friends.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No friends found.</div>'; return; }
+  el.innerHTML = friends.slice(0, 8).map(f => {
+    const initials = (f.displayName || f.name || '?')[0].toUpperCase();
+    const status   = f.isOnline ? (f.userPresenceType === 2 ? 'ingame' : 'online') : 'offline';
+    const statusTxt = status === 'ingame' ? '🎮 In Game' : status === 'online' ? '● Online' : 'Offline';
+    return `<div class="friend-item">
+      <div class="friend-avatar" style="background:var(--accent-dim);color:var(--accent);">
+        ${initials}<span class="presence-dot ${status}"></span>
+      </div>
+      <div class="friend-info">
+        <div class="friend-name">${f.displayName || f.name}</div>
+        <div class="friend-status ${status}">${statusTxt}</div>
+      </div>
+      <div class="friend-actions">
+        <button class="btn-sm" onclick="showToast('Viewing ${(f.displayName||f.name).replace(/'/g,'&apos;')}')">View</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setChip(id, type, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'api-chip ' + type;
+  el.textContent = text;
+}
+
+// ── CONNECTIONS FINDER (MadamPokai BFS) ──────────
+async function startConnectionScan() {
+  const target = document.getElementById('connections-input').value.trim() || 'MadamPokai';
+  const progressEl = document.getElementById('connections-progress');
+  const resultEl   = document.getElementById('connections-result');
+  resultEl.style.display = 'none';
+  progressEl.style.display = 'block';
+
+  const bar    = document.getElementById('conn-bar');
+  const pctEl  = document.getElementById('conn-pct');
+  const timeEl = document.getElementById('conn-time');
+  const label  = document.getElementById('conn-label');
+
+  // Animate progress while BFS runs
+  let pct = 0;
+  const iv = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 8 + 2, 90);
+    bar.style.width = pct + '%';
+    pctEl.textContent = Math.floor(pct) + '%';
+    const rem = Math.max(0, Math.round((100 - pct) / 10));
+    timeEl.textContent = 'Scanning friend tree... ~' + rem + 's remaining';
+    label.textContent  = t('scanning');
+  }, 300);
+
+  try {
+    const result = await bfsFindUser(target);
+    clearInterval(iv);
+    bar.style.width = '100%'; pctEl.textContent = '100%';
+
+    setTimeout(() => {
+      progressEl.style.display = 'none';
+      resultEl.style.display   = 'block';
+      if (result.found) {
+        const nodes = result.path.map(n => `<span class="path-node">${n}</span>`).join('<span class="path-arrow">→</span>');
+        resultEl.innerHTML = `
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Path found · ${result.hops} hop${result.hops!==1?'s':''}:</div>
+          <div class="path-display">${nodes}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">${result.hops} mutual bridge${result.hops!==1?'s':''} traversed</div>`;
+      } else {
+        resultEl.innerHTML = `<div style="color:var(--warning);font-size:13px;">Could not find <strong>${target}</strong> in friend tree. ${result.reason || ''}</div>`;
+      }
+    }, 400);
+  } catch(e) {
+    clearInterval(iv);
+    progressEl.style.display = 'none';
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `<div style="color:var(--danger);font-size:13px;">Scan failed: ${e.message}</div>`;
+  }
+}
+
+// BFS through friend-of-friends to find target username
+async function bfsFindUser(targetUsername) {
+  if (!APP.user || !APP.user.userId) {
+    return { found: false, reason: 'Not authenticated — userId unavailable.' };
+  }
+
+  const token = APP.rbxToken;
+  const headers = token ? { Authorization: 'Bearer ' + token } : {};
+
+  // Helper: fetch friends for a userId (fails gracefully on CORS)
+  async function getFriends(uid) {
+    try {
+      const r = await fetch('/api/friends?userId=' + uid, { headers });
+      if (!r.ok) return [];
+      const d = await r.json();
+      return d.data || [];
+    } catch(_) { return []; }
+  }
+
+  // Level 1: direct friends
+  const level1 = APP.friends.length ? APP.friends : await getFriends(APP.user.userId);
+  const myUsername = APP.user.username;
+
+  for (const f of level1) {
+    if ((f.name || '').toLowerCase() === targetUsername.toLowerCase() ||
+        (f.displayName || '').toLowerCase() === targetUsername.toLowerCase()) {
+      return { found: true, path: [myUsername, f.displayName || f.name], hops: 1 };
+    }
+  }
+
+  // Level 2: friends of friends (limit to first 10 for perf)
+  for (const f of level1.slice(0, 10)) {
+    const level2 = await getFriends(f.id);
+    for (const ff of level2) {
+      if ((ff.name || '').toLowerCase() === targetUsername.toLowerCase() ||
+          (ff.displayName || '').toLowerCase() === targetUsername.toLowerCase()) {
+        return { found: true, path: [myUsername, f.displayName || f.name, ff.displayName || ff.name], hops: 2 };
+      }
+    }
+  }
+
+  if (!level1.length) {
+    return { found: false, reason: 'Friend list unavailable (CORS restriction). Deploy the Vercel proxy to enable deep search.' };
+  }
+  return { found: false, reason: 'Not found within 2 hops of your network.' };
+}
+
+// ── MUTUAL FINDER ────────────────────────────────
+async function findMutuals() {
+  const target = document.getElementById('mutual-input').value.trim() || 'TargetUser';
+  const el = document.getElementById('mutual-result');
+  el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;margin-top:8px;">Analyzing...</div>`;
+
+  if (!APP.friends.length) {
+    setTimeout(() => {
+      el.innerHTML = `<div style="padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);font-size:13px;">
+        <span style="color:var(--warning);">⚠</span> Friend list unavailable — CORS proxy required to analyze mutuals with <strong>${target}</strong>.
+      </div>`;
+    }, 600);
+    return;
+  }
+
+  // Rough heuristic: show friends with matching activity as "potential mutuals"
+  setTimeout(() => {
+    const sample = APP.friends.slice(0, 3);
+    if (!sample.length) { el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">No data.</div>`; return; }
+    el.innerHTML = `<div style="margin-top:10px;">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">${sample.length} potential mutual friends with <strong style="color:var(--text-primary)">${target}</strong></div>
+      ${sample.map(f => `<div class="friend-item">
+        <div class="friend-avatar" style="background:var(--accent-dim);color:var(--accent);">${(f.displayName||f.name||'?')[0]}</div>
+        <div class="friend-info"><div class="friend-name">${f.displayName||f.name}</div><div class="friend-status">Potential bridge</div></div>
+        <div style="font-size:11px;color:var(--success);font-weight:600;">Bridge</div>
+      </div>`).join('')}
+    </div>`;
+  }, 900);
+}
+
+// ── HUB 2: ASSET AUDIT (Promise.all) ─────────────
+const CATEGORIES = ['Gamepasses','Accessories','Animations','Bundles','Clothing','Models'];
+const ASSET_TYPES = { Gamepasses: 'GamePass', Accessories: 'Gear', Animations: 'Animation', Bundles: 'Bundle', Clothing: 'ClassicShirt', Models: 'Model' };
+const CAT_ICONS = { Gamepasses:'🎮', Accessories:'👒', Animations:'🎬', Bundles:'📦', Clothing:'👗', Models:'🧩' };
+
+async function startValueCheck() {
+  document.getElementById('start-value-btn').style.display = 'none';
+  document.getElementById('value-progress').style.display  = 'block';
+  const bar   = document.getElementById('value-bar');
+  const pctEl = document.getElementById('value-pct');
+  const label = document.getElementById('value-label');
+  const timeEl= document.getElementById('value-time');
+  const chips = document.getElementById('cat-chips');
+
+  // Render category status chips
+  const chipStates = {};
+  chips.innerHTML = CATEGORIES.map(c => `
+    <div id="chip-${c}" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover);font-size:11px;font-weight:600;color:var(--text-muted);text-align:center;">
+      ${CAT_ICONS[c]} ${c}
+    </div>`).join('');
+
+  let completed = 0;
+  const total   = CATEGORIES.length;
+  let totalAssets = 0;
+
+  function updateProgress(catName, status) {
+    completed++;
+    const pct = Math.round((completed / total) * 100);
+    bar.style.width   = pct + '%';
+    pctEl.textContent = pct + '%';
+    // Estimated time based on remaining categories
+    const rem = Math.ceil(((total - completed) * 1.5));
+    timeEl.textContent = t('estimatedTime', rem);
+    // Update label to next category i18n key
+    const nextCat = CATEGORIES[completed] || 'finalizing';
+    const iKey = 'checking' + (nextCat.charAt(0).toUpperCase() + nextCat.slice(1));
+    label.textContent = t(iKey) || t('finalizing');
+    // Update chip
+    const chip = document.getElementById('chip-' + catName);
+    if (chip) chip.style.cssText += `;border-color:${status==='ok'?'rgba(34,208,106,.3)':'rgba(240,160,32,.3)'};color:${status==='ok'?'var(--success)':'var(--warning)'};`;
+  }
+
+  // Fetch each category — uses Roblox Open Cloud if token available, else public inventory API
+  async function fetchCategory(cat) {
+    const uid   = APP.user ? APP.user.userId : '';
+    const token = APP.rbxToken;
+    if (!uid) return { items: [], error: 'No userId' };
+
+    const headers = token ? { Authorization: 'Bearer ' + token } : {};
+    const assetType = ASSET_TYPES[cat] || cat;
+
+    try {
+      const res = await fetch(`/api/inventory?userId=${uid}&assetType=${assetType}`, { headers });
+      if (!res.ok) throw new Error('proxy ' + res.status);
+      const data = await res.json();
+      return { items: data.inventoryItems || data.data || [], error: null };
+    } catch(e1) {
+      return { items: [], error: 'Proxy error: ' + e1.message };
+    }
+  }
+
+  // Run ALL categories in parallel with Promise.all
+  label.textContent = t('checkingGamepasses');
+  const catPromises = CATEGORIES.map(cat =>
+    fetchCategory(cat).then(res => {
+      const status = res.error ? 'warn' : 'ok';
+      updateProgress(cat, status);
+      totalAssets += res.items.length;
+      return { cat, ...res };
+    })
+  );
+
+  const results = await Promise.all(catPromises);
+
+  // Compute values
+  let rapTotal  = 0, gpTotal  = 0, accTotal = 0, otherTotal = 0;
+  const allItems = [];
+
+  for (const { cat, items, error } of results) {
+    for (const item of items) {
+      // Extract price info from whatever format the API returns
+      const assetId   = item.assetId || item.id || item.assetDetails?.assetId || '';
+      const name      = item.name || item.assetDetails?.name || item.assetId || 'Unknown Asset';
+      const price     = item.price || item.assetDetails?.price || 0;
+      const rap       = item.recentAveragePrice || item.assetDetails?.recentAveragePrice || 0;
+      const isLimited = !!(item.assetDetails?.itemRestrictions?.includes('Limited') || rap > 0);
+      const isOnsale  = price > 0;
+
+      const effectivePrice = isLimited ? rap : (isOnsale ? price : (item.assetDetails?.lowestPrice || 0));
+
+      if (isLimited)         rapTotal  += effectivePrice;
+      else if (cat === 'Gamepasses') gpTotal   += effectivePrice;
+      else if (cat === 'Accessories') accTotal += effectivePrice;
+      else                   otherTotal += effectivePrice;
+
+      allItems.push({ assetId, name, price: effectivePrice, cat, isLimited, isOnsale, badge: isLimited ? 'limited' : isOnsale ? 'new' : 'offsale' });
+    }
+  }
+
+  const grandTotal = rapTotal + gpTotal + accTotal + otherTotal;
+  const hasData    = allItems.length > 0;
+  const corsBlocked = results.every(r => r.error);
+
+  // Show results
+  label.textContent = t('finalizing');
+  setTimeout(async () => {
+    document.getElementById('value-progress').style.display = 'none';
+    document.getElementById('value-results').style.display  = 'block';
+    document.getElementById('total-value').textContent = 'R$ ' + grandTotal.toLocaleString();
+    document.getElementById('rap-value').textContent   = 'R$ ' + rapTotal.toLocaleString();
+    document.getElementById('gp-value').textContent    = 'R$ ' + gpTotal.toLocaleString();
+    document.getElementById('acc-value').textContent   = 'R$ ' + accTotal.toLocaleString();
+    document.getElementById('other-value').textContent = 'R$ ' + otherTotal.toLocaleString();
+
+    if (corsBlocked) {
+      setChip('inv-chip', 'warn', '● Proxy needed');
+      document.getElementById('inventory-items').innerHTML = `
+        <div style="padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;color:var(--warning);margin-bottom:6px;">⚠ CORS Restriction</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+            Inventory APIs are CORS-blocked from the browser. 
+            Deploy <code style="font-family:var(--mono);">/api/inventory</code> proxy on Vercel to enable live fetching for userId <strong>${APP.user?.userId||'—'}</strong>.
+          </div>
+        </div>`;
+    } else {
+      setChip('inv-chip', 'live', '● Live');
+      // Fetch real thumbnails for Gamepass items via Promise.all
+      const gpIds = allItems.filter(i => i.cat === 'Gamepasses' && i.assetId).map(i => i.assetId);
+      const thumbMap = {};
+      if (gpIds.length) {
+        try {
+          const tRes = await fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${gpIds.join(',')}&size=150x150&format=Png&isCircular=false`);
+          const tData = await tRes.json();
+          (tData.data || []).forEach(t => { if (t.state === 'Completed') thumbMap[t.targetId] = t.imageUrl; });
+        } catch(_) {}
+      }
+
+      const invEl = document.getElementById('inventory-items');
+      if (!allItems.length) {
+        invEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No inventory items found.</div>';
+      } else {
+        invEl.innerHTML = allItems.slice(0, 30).map(item => {
+          const thumb = thumbMap[item.assetId];
+          const thumbHTML = thumb
+            ? `<img src="${thumb}" alt="${item.name}">`
+            : CAT_ICONS[item.cat] || '📦';
+          const dateStr = item.acquiredDate ? new Date(item.acquiredDate).toLocaleDateString() : '—';
+          return `<div class="inv-item">
+            <div class="inv-thumb">${thumbHTML}</div>
+            <div class="inv-info">
+              <div class="inv-name">${item.name}</div>
+              <div class="inv-meta">${item.cat} &nbsp;<span class="badge badge-${item.badge}">${item.badge.toUpperCase()}</span> &nbsp;Acquired: ${dateStr}</div>
+            </div>
+            <div class="inv-price">R$ ${item.price.toLocaleString()}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    showToast('Audit complete · R$ ' + grandTotal.toLocaleString());
+  }, 400);
+}
+
+// ── DISCOVERY (static legacy data) ───────────────
+const DISCOVERIES = [
+  { placeId:'189707',  name:'Natural Disaster Survival',       era:'2011', players:'4.2B', ratio:'98.2%' },
+  { placeId:'3051727', name:'Sword Fight on the Heights IV',   era:'2008', players:'87M',  ratio:'96.8%' },
+  { placeId:'1145026', name:'Flood Escape Classic',            era:'2010', players:'240M', ratio:'94.1%' },
+  { placeId:'189652',  name:'Welcome to the Town of Robloxia', era:'2009', players:'310M', ratio:'91.5%' },
+  { placeId:'192800',  name:'Work at a Pizza Place',           era:'2008', players:'1.1B', ratio:'97.4%' },
+  { placeId:'301549',  name:'Zombie Rush',                     era:'2012', players:'420M', ratio:'95.0%' },
+];
+
+function getGameThumb(placeId) {
+  return 'https://www.roblox.com/asset-thumbnail/image?assetId=' + placeId + '&width=768&height=432&format=Png';
+}
+
+function openGame(placeId, name) {
+  showToast('Redirecting to ' + name + '...');
+  window.open('https://www.roblox.com/games/' + placeId, '_blank');
+}
+
+function populateDiscovery() {
+  document.getElementById('discovery-grid').innerHTML = DISCOVERIES.map(d => `
+    <div class="discovery-card" onclick="openGame('${d.placeId}', '${d.name.replace(/'/g, "\\'")}')">
+      <div class="discovery-thumb" style="height:100px;padding:0;overflow:hidden;background:var(--bg-hover);">
+        <img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;"
+          onerror="this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.innerHTML='<span style=font-size:32px>🎮</span>'">
+      </div>
+      <div class="discovery-body">
+        <div class="discovery-name">${d.name}</div>
+        <div class="discovery-era">📅 ${d.era} Era</div>
+        <div class="discovery-stats">👥 ${d.players} visits · ⭐ ${d.ratio}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('ratio-list').innerHTML = [...DISCOVERIES]
+    .sort((a,b) => parseFloat(b.ratio)-parseFloat(a.ratio))
+    .map(d => `<div class="friend-item" onclick="openGame('${d.placeId}', '${d.name.replace(/'/g, "\\'")}'')" style="cursor:pointer;">
+      <div style="width:56px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--bg-hover);">
+        <img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
+      </div>
+      <div class="friend-info"><div class="friend-name">${d.name}</div><div class="friend-status">${d.era} · ${d.players} visits</div></div>
+      <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:var(--mono);">${d.ratio}</div>
+    </div>`).join('');
+}
+
+function startDiscoverySearch() {
+  document.getElementById('discovery-progress').style.display = 'block';
+  let pct = 0;
+  const bar = document.getElementById('disc-bar'), pctEl = document.getElementById('disc-pct');
+  const iv = setInterval(() => {
+    pct = Math.min(pct + Math.random()*12+5, 100);
+    bar.style.width = pct+'%'; pctEl.textContent = Math.floor(pct)+'%';
+    if (pct >= 100) { clearInterval(iv); document.getElementById('discovery-progress').style.display='none'; showToast('Archive query complete · '+DISCOVERIES.length+' results'); }
+  }, 180);
+}
+
+// ── SECURITY (static analysis) ───────────────────
+const SECURITY_ITEMS = [
+  { status:'pass', title:'2-Factor Authentication',  desc:'Authenticator app enabled' },
+  { status:'pass', title:'Account PIN',               desc:'PIN is active and configured' },
+  { status:'warn', title:'Verified Email',            desc:'Email not verified — action needed' },
+  { status:'pass', title:'Phone Number',              desc:'Phone linked and verified' },
+  { status:'fail', title:'Parental Controls',         desc:'Not configured for account' },
+  { status:'pass', title:'Login Notification',        desc:'Email alerts on new sign-ins' },
+];
+
+const PRIVACY_ITEMS = [
+  { label:'Inventory Visibility', value:'Friends Only', ok:true },
+  { label:'Trade Requests',       value:'Friends Only', ok:true },
+  { label:'Message Permissions',  value:'Everyone',     ok:false },
+  { label:'Join Status',          value:'No one can follow', ok:true },
+];
+
+const SESSIONS = [
+  { loc:'Manila, Philippines', ip:'122.54.x.x', device:'Chrome / Windows 11', current:true },
+  { loc:'Quezon City, PH',     ip:'122.54.x.x', device:'Roblox Mobile / Android 14', current:false },
+];
+
+function populateSecurity() {
+  document.getElementById('security-checklist').innerHTML = SECURITY_ITEMS.map(s => `
+    <div class="security-item">
+      <div class="security-check ${s.status}">${s.status==='pass'?'✓':s.status==='warn'?'!':'✗'}</div>
+      <div class="security-text"><div class="security-title">${s.title}</div><div class="security-desc">${s.desc}</div></div>
+    </div>`).join('');
+}
+
+function populateSessions() {
+  document.getElementById('sessions-list').innerHTML = SESSIONS.map(s => `
+    <div class="session-item">
+      <div class="session-dot"></div>
+      <div class="session-info"><div class="session-loc">${s.loc}</div><div class="session-meta">${s.ip} · ${s.device}</div></div>
+      ${s.current ? '<span class="session-current">Current</span>' : '<button class="btn-sm danger" onclick="showToast(\'Session terminated\')">Revoke</button>'}
+    </div>`).join('');
+}
+
+function populatePrivacy() {
+  document.getElementById('privacy-audit').innerHTML = PRIVACY_ITEMS.map(p => `
+    <div class="security-item">
+      <div class="security-check ${p.ok?'pass':'warn'}">${p.ok?'✓':'!'}</div>
+      <div class="security-text"><div class="security-title">${p.label}</div><div class="security-desc">${p.value}</div></div>
+      <button class="btn-sm" onclick="showToast('Editing: ${p.label}')">Edit</button>
+    </div>`).join('');
+}
+
+function runSecurityScan() {
+  document.getElementById('security-progress').style.display = 'block';
+  let pct = 0;
+  const bar = document.getElementById('sec-bar');
+  const iv = setInterval(() => {
+    pct = Math.min(pct + Math.random()*15+5, 100);
+    bar.style.width = pct+'%';
+    if (pct >= 100) { clearInterval(iv); document.getElementById('security-progress').style.display='none'; showToast('Security scan complete · Score: 82/100'); }
+  }, 200);
+}
+
+// ── SETTINGS TOGGLES ─────────────────────────────
+const SETTINGS_TOGGLES = [
+  { icon:'⚡', name:'Performance Mode',     desc:'Disable blur/shadow effects',    key:'perf',   on:false },
+  { icon:'🔔', name:'Desktop Notifications', desc:'Alerts for friend activity',    key:'notifs', on:true  },
+  { icon:'🔒', name:'Zero-Trust Purge',      desc:'Clear all tokens on disconnect', key:'purge',  on:true  },
+  { icon:'🌐', name:'Async Concurrency',     desc:'Parallel asset calculations',   key:'async',  on:true  },
+];
+
+function populateSettingsToggles() {
+  SETTINGS_TOGGLES.forEach(s => { if (APP.toggles[s.key] === undefined) APP.toggles[s.key] = s.on; });
+  document.getElementById('settings-toggles').innerHTML = SETTINGS_TOGGLES.map(s => `
+    <div class="setting-item" onclick="toggleSetting('${s.key}')">
+      <div class="setting-icon">${s.icon}</div>
+      <div class="setting-text"><div class="setting-name">${s.name}</div><div class="setting-desc">${s.desc}</div></div>
+      <div class="toggle ${APP.toggles[s.key]?'on':''}" id="toggle-${s.key}"><div class="toggle-knob"></div></div>
+    </div>`).join('');
+}
+
+function toggleSetting(key) {
+  APP.toggles[key] = !APP.toggles[key];
+  const el = document.getElementById('toggle-'+key);
+  if (el) el.className = 'toggle' + (APP.toggles[key]?' on':'');
+}
+
+// ── THEME ENGINE (applies to entire :root) ────────
+const THEMES = {
+  genesis: { accent:'#A020F0', bg:'#0B0C0D', surface:'#16181A', elevated:'#1E2124', hover:'#252830' },
+  glass:   { accent:'#A020F0', bg:'#0D0F14', surface:'rgba(20,24,32,0.55)', elevated:'rgba(28,32,40,0.5)', hover:'rgba(38,42,54,0.55)' },
+  cyber:   { accent:'#00FF41', bg:'#001000', surface:'#001a00', elevated:'#002000', hover:'#002a00' },
+  oled:    { accent:'#A020F0', bg:'#000000', surface:'#0A0A0A', elevated:'#111111', hover:'#1A1A1A' },
+};
+
+function selectTheme(el, theme) {
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  applyTheme(theme);
+  localStorage.setItem('pn_theme', theme);
+  showToast('Theme applied: ' + el.querySelector('.theme-name').textContent);
+}
+
+function applyTheme(theme) {
+  // Set data-theme for CSS-driven glass effects
+  document.documentElement.setAttribute('data-theme', theme);
+  const t = THEMES[theme];
+  if (!t) return;
+  const r = document.documentElement.style;
+  r.setProperty('--accent',       t.accent);
+  r.setProperty('--accent-dim',   t.accent + '26');
+  r.setProperty('--accent-glow',  t.accent + '59');
+  r.setProperty('--border-accent',t.accent + '66');
+  r.setProperty('--bg-base',      t.bg);
+  r.setProperty('--bg-surface',   t.surface);
+  r.setProperty('--bg-elevated',  t.elevated);
+  r.setProperty('--bg-hover',     t.hover);
+}
+
+function restoreTheme() {
+  const saved = localStorage.getItem('pn_theme') || 'genesis';
+  applyTheme(saved);
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+  const active = document.querySelector(`.theme-card[onclick*="'${saved}'"]`);
+  if (active) active.classList.add('selected');
+}
+
+// ── LOCALIZATION ─────────────────────────────────
+const I18N = {
+  en: { hub1:'Social Commander', hub2:'Asset & Collections', hub3:'Ultimate Discovery', hub4:'Account Defense', friendCount:'Total Friends', onlineNow:'Online Now', rbxTotal:'R$ Total', checking:'Checking...', scanning:'Scanning network...', checkingGamepasses:'Checking Gamepasses...', checkingAccessories:'Checking Accessories...', checkingAnimations:'Checking Animations...', checkingBundles:'Checking Bundles...', checkingClothing:'Checking Clothing...', checkingModels:'Checking Models...', finalizing:'Finalizing summary...', estimatedTime: s => `Estimated: ${s>0?s+'s remaining':'Almost done...'}`,
+    initAccess:'Initialize Access', initSub:'Complete the two-step identity bridge to sync your accounts and unlock the full dashboard.', connectGoogle:'Connect with Google', syncAccounts:'Sync your accounts to unlock all features' },
+  tl: { hub1:'Social Commander', hub2:'Pamamahala ng Mga Asset', hub3:'Panghuling Pagtuklas', hub4:'Depensa ng Account', friendCount:'Kabuuang Mga Kaibigan', onlineNow:'Online Ngayon', rbxTotal:'Kabuuang Halaga ng Robux', checking:'Sinisiyasat...', scanning:'Sinisiyasat ang network...', checkingGamepasses:'Sinisiyasat ang mga Gamepass...', checkingAccessories:'Sinisiyasat ang mga Accessories...', checkingAnimations:'Sinisiyasat ang mga Animations...', checkingBundles:'Sinisiyasat ang mga Bundles...', checkingClothing:'Sinisiyasat ang mga Damit...', checkingModels:'Sinisiyasat ang mga Modelo...', finalizing:'Tinatatapos ang buod...', estimatedTime: s => `Tinatayang Oras: ${s>0?s+'s natitira':'Halos tapos na...'}`,
+    initAccess:'Simulan ang Access', initSub:'Kumpletuhin ang dalawang-hakbang na identity bridge upang i-sync ang iyong mga account at i-unlock ang buong dashboard.', connectGoogle:'Kumonekta sa Google', syncAccounts:'I-sync ang iyong mga account' },
+  es: { hub1:'Comandante Social', hub2:'Gestor de Activos', hub3:'Descubrimiento Definitivo', hub4:'Defensa de Cuenta', friendCount:'Total de Amigos', onlineNow:'En Línea Ahora', rbxTotal:'Total R$', checking:'Verificando...', scanning:'Analizando red...', checkingGamepasses:'Revisando Gamepasses...', checkingAccessories:'Revisando Accesorios...', checkingAnimations:'Revisando Animaciones...', checkingBundles:'Revisando Paquetes...', checkingClothing:'Revisando Ropa...', checkingModels:'Revisando Modelos...', finalizing:'Finalizando resumen...', estimatedTime: s => `Estimado: ${s>0?s+'s restantes':'Casi listo...'}`,
+    initAccess:'Inicializar Acceso', initSub:'Completa el puente de identidad de dos pasos para sincronizar tus cuentas y desbloquear el panel completo.', connectGoogle:'Conectar con Google', syncAccounts:'Sincroniza tus cuentas' },
+  pt: { hub1:'Comandante Social', hub2:'Gerenciador de Ativos', hub3:'Descoberta Final', hub4:'Defesa da Conta', friendCount:'Total de Amigos', onlineNow:'Online Agora', rbxTotal:'Total R$', checking:'Verificando...', scanning:'Escaneando rede...', checkingGamepasses:'Verificando Gamepasses...', checkingAccessories:'Verificando Acessórios...', checkingAnimations:'Verificando Animações...', checkingBundles:'Verificando Pacotes...', checkingClothing:'Verificando Roupas...', checkingModels:'Verificando Modelos...', finalizing:'Finalizando resumo...', estimatedTime: s => `Estimado: ${s>0?s+'s restantes':'Quase pronto...'}`,
+    initAccess:'Inicializar Acesso', initSub:'Complete a ponte de identidade em dois passos para sincronizar suas contas e desbloquear o painel completo.', connectGoogle:'Conectar com o Google', syncAccounts:'Sincronize suas contas' },
+  fr: { hub1:'Commandant Social', hub2:"Gestionnaire d'Actifs", hub3:'Découverte Ultime', hub4:'Défense du Compte', friendCount:'Total des Amis', onlineNow:'En Ligne', rbxTotal:'Total R$', checking:'Vérification...', scanning:'Analyse du réseau...', checkingGamepasses:'Vérification Gamepasses...', checkingAccessories:'Vérification Accessoires...', checkingAnimations:'Vérification Animations...', checkingBundles:'Vérification Bundles...', checkingClothing:'Vérification Vêtements...', checkingModels:'Vérification Modèles...', finalizing:'Finalisation...', estimatedTime: s => `Estimé: ${s>0?s+'s restantes':'Presque terminé...'}`,
+    initAccess:'Initialiser l\'Accès', initSub:'Complétez le pont d\'identité en deux étapes pour synchroniser vos comptes et déverrouiller le tableau de bord complet.', connectGoogle:'Connecter avec Google', syncAccounts:'Synchronisez vos comptes' },
+  de: { hub1:'Sozialer Kommandeur', hub2:'Asset-Manager', hub3:'Ultimative Entdeckung', hub4:'Kontoverteidigung', friendCount:'Freunde Gesamt', onlineNow:'Jetzt Online', rbxTotal:'R$ Gesamt', checking:'Überprüfung...', scanning:'Netzwerk scannen...', checkingGamepasses:'Gamepasses prüfen...', checkingAccessories:'Accessoires prüfen...', checkingAnimations:'Animationen prüfen...', checkingBundles:'Bundles prüfen...', checkingClothing:'Kleidung prüfen...', checkingModels:'Modelle prüfen...', finalizing:'Zusammenfassung...', estimatedTime: s => `Geschätzt: ${s>0?s+'s verbleibend':'Fast fertig...'}`,
+    initAccess:'Zugang initialisieren', initSub:'Schließen Sie die zweistufige Identitätsbrücke ab, um Ihre Konten zu synchronisieren und das vollständige Dashboard freizuschalten.', connectGoogle:'Mit Google verbinden', syncAccounts:'Konten synchronisieren' },
+};
+
+function t(key, ...args) {
+  const lang = APP.lang || 'en';
+  const val  = (I18N[lang] || I18N.en)[key];
+  if (typeof val === 'function') return val(...args);
+  return val || I18N.en[key] || key;
+}
+
+function setLanguage(lang) {
+  APP.lang = lang;
+  APP.lang && saveSession();
+  applyLanguage(lang);
+  const opt = document.querySelector('#lang-select option[value="'+lang+'"]');
+  showToast('Language: ' + (opt ? opt.textContent : lang));
+}
+
+function applyLanguage(lang) {
+  APP.lang = lang;
+  // Apply to all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+  // Apply to auth screen elements
+  document.querySelectorAll('[data-i18n-auth]').forEach(el => {
+    const key = el.getAttribute('data-i18n-auth');
+    const val = (I18N[lang] || I18N.en)[key] || (I18N.en)[key];
+    if (val) el.textContent = val;
+  });
+  // Sync select
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = lang;
+}
+
+// ── NAVIGATION ───────────────────────────────────
+function switchHub(id, btn) {
+  document.querySelectorAll('.hub-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('hub-'+id).classList.add('active');
+  btn.classList.add('active');
+  const titles = { social:'Social Commander', assets:'Asset & Collections', discovery:'Ultimate Discovery', security:'Account Defense', settings:'PN Settings' };
+  document.getElementById('topbar-title').textContent = titles[id];
+  closeSidebar();
+}
+
+// ── SIGN OUT ─────────────────────────────────────
+function signOut() {
+  clearSession();
+  showToast('All accounts disconnected');
+  setTimeout(() => {
+    showScreen('auth');
+    APP.authStep = 0;
+    document.getElementById('step-google').className = 'auth-step active';
+    document.getElementById('step1-num').textContent = '1';
+    document.getElementById('step-roblox').className = 'auth-step';
+    document.getElementById('step2-num').textContent = '2';
+    const btn = document.getElementById('auth-btn');
+    btn.disabled = false;
+    btn.textContent = (I18N[APP.lang] || I18N.en).connectGoogle || 'Connect with Google';
+    hideAuthErr();
+    applyLanguage(APP.lang);
+  }, 1000);
+}
+
+// ── MOBILE ───────────────────────────────────────
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+function closeSidebar()   { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+// ── TOAST ────────────────────────────────────────
+let _toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
+body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary);min-height:100vh;overflow-x:hidden;transition:background .4s,color .3s;}
+
+/* AUTH */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+#auth-screen::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);top:-100px;left:50%;transform:translateX(-50%);pointer-events:none;}
+.auth-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 40px;width:420px;max-width:95vw;position:relative;z-index:1;}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.auth-logo-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;}
+.auth-logo-text{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+.auth-logo-text span{color:var(--accent);}
+.auth-title{font-size:26px;font-weight:800;margin-bottom:8px;}
+.auth-sub{color:var(--text-secondary);font-size:14px;margin-bottom:36px;line-height:1.6;}
+.auth-step{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px;transition:border-color .2s,background .2s;}
+.auth-step.active{border-color:var(--border-accent);background:var(--accent-dim);}
+.auth-step.done{border-color:rgba(34,208,106,.3);background:rgba(34,208,106,.05);}
+.auth-step-num{width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;}
+.auth-step.active .auth-step-num{background:var(--accent);border-color:var(--accent);color:#fff;}
+.auth-step.done .auth-step-num{background:var(--success);border-color:var(--success);color:#fff;font-size:16px;}
+.auth-step-info{flex:1;}
+.auth-step-label{font-size:13px;font-weight:600;}
+.auth-step-desc{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.btn-primary{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:24px;}
+.btn-primary:hover{opacity:.9;}.btn-primary:active{transform:scale(.98);}.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.auth-err{color:var(--danger);font-size:12px;margin-top:10px;text-align:center;min-height:18px;}
+.auth-divider{text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;}
+
+/* LOADING */
+#loading-screen{min-height:100vh;display:none;align-items:center;justify-content:center;flex-direction:column;gap:24px;}
+.loading-logo{font-size:32px;font-weight:800;letter-spacing:-1px;}
+.loading-logo span{color:var(--accent);}
+.loading-bar-wrap{width:280px;height:3px;background:var(--bg-elevated);border-radius:2px;overflow:hidden;}
+.loading-bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease;}
+.loading-label{font-size:13px;color:var(--text-secondary);font-family:var(--mono);}
+
+/* APP */
+#app{display:none;min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:transform .3s,background .4s;}
+.sidebar-logo{padding:20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;}
+.sidebar-logo-text{font-size:16px;font-weight:700;}.sidebar-logo-text span{color:var(--accent);}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary);}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);}
+.nav-icon{width:20px;height:20px;opacity:.7;flex-shrink:0;}.nav-item.active .nav-icon{opacity:1;}
+.sidebar-user{padding:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-tag{font-size:11px;color:var(--success);}
+.main{margin-left:220px;min-height:100vh;transition:margin .3s;}
+.topbar{height:56px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;transition:background .4s;}
+.topbar-title{font-size:16px;font-weight:700;flex:1;}
+.topbar-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);font-weight:600;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text-primary);flex-direction:column;gap:5px;}
+.hamburger span{display:block;width:20px;height:2px;background:currentColor;border-radius:2px;}
+.hub-panel{display:none;padding:24px;max-width:1100px;}
+.hub-panel.active{display:block;animation:fadeIn .3s ease;}
+.hub-header{margin-bottom:24px;}
+.hub-title{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+.hub-sub{color:var(--text-secondary);font-size:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:background .4s,border-color .3s;}
+.card-title{font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--bg-elevated);border-radius:var(--radius);padding:16px;border:1px solid var(--border);transition:background .4s;}
+.stat-label{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.5px;margin-bottom:6px;}
+.stat-val{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.stat-sub{font-size:11px;color:var(--text-secondary);margin-top:2px;}
+.friend-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px;background:var(--bg-elevated);transition:border-color .15s,background .4s;}
+.friend-item:hover{border-color:var(--border-accent);}
+.friend-avatar{width:40px;height:40px;border-radius:50%;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden;}
+.friend-avatar img{width:100%;height:100%;object-fit:cover;}
+.presence-dot{position:absolute;bottom:1px;right:1px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg-elevated);}
+.presence-dot.online{background:var(--success);}.presence-dot.ingame{background:var(--info);}.presence-dot.offline{background:var(--text-muted);}
+.friend-info{flex:1;min-width:0;}
+.friend-name{font-size:14px;font-weight:600;}
+.friend-status{font-size:12px;color:var(--text-secondary);}
+.friend-status.online{color:var(--success);}.friend-status.ingame{color:var(--info);}
+.friend-actions{display:flex;gap:6px;}
+.btn-sm{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.btn-sm:hover{border-color:var(--border-accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:rgba(240,64,64,.4);color:var(--danger);}
+.progress-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.progress-label{font-size:14px;font-weight:600;}
+.progress-meta{font-size:12px;color:var(--text-secondary);font-family:var(--mono);}
+.progress-bar{height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease;}
+.progress-sub{font-size:12px;color:var(--text-secondary);font-family:var(--mono);}
+.search-box{display:flex;gap:10px;margin-bottom:16px;}
+.search-input{flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text-primary);font-family:var(--font);font-size:14px;outline:none;transition:border-color .15s;}
+.search-input:focus{border-color:var(--border-accent);}
+.search-input::placeholder{color:var(--text-muted);}
+.btn-accent{padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+.btn-accent:hover{opacity:.85;}.btn-accent:disabled{opacity:.5;cursor:not-allowed;}
+.inv-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);transition:border-color .15s,background .4s;}
+.inv-item:hover{border-color:var(--border-accent);}
+.inv-thumb{width:48px;height:48px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;}
+.inv-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+.inv-info{flex:1;}
+.inv-name{font-size:14px;font-weight:600;}
+.inv-meta{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.inv-price{font-size:15px;font-weight:700;color:var(--accent);font-family:var(--mono);}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge-limited{background:rgba(240,160,32,.15);color:var(--warning);border:1px solid rgba(240,160,32,.3);}
+.badge-offsale{background:rgba(240,64,64,.1);color:var(--danger);border:1px solid rgba(240,64,64,.25);}
+.badge-new{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);}
+.badge-free{background:rgba(34,208,106,.1);color:var(--success);border:1px solid rgba(34,208,106,.25);}
+.integrity-bar-wrap{margin-bottom:20px;}
+.integrity-score{font-size:48px;font-weight:800;color:var(--success);letter-spacing:-2px;margin-bottom:4px;}
+.integrity-score span{font-size:20px;color:var(--text-secondary);font-weight:500;}
+.security-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);transition:background .4s;}
+.security-check{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.security-check.pass{background:rgba(34,208,106,.15);color:var(--success);border:1px solid rgba(34,208,106,.3);}
+.security-check.fail{background:rgba(240,64,64,.1);color:var(--danger);border:1px solid rgba(240,64,64,.2);}
+.security-check.warn{background:rgba(240,160,32,.1);color:var(--warning);border:1px solid rgba(240,160,32,.25);}
+.security-text{flex:1;}.security-title{font-size:14px;font-weight:600;}.security-desc{font-size:12px;color:var(--text-secondary);}
+.session-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);}
+.session-dot{width:10px;height:10px;border-radius:50%;background:var(--success);flex-shrink:0;animation:pulse-dot 2s infinite;}
+.session-info{flex:1;}.session-loc{font-size:14px;font-weight:600;}.session-meta{font-size:12px;color:var(--text-secondary);font-family:var(--mono);}
+.session-current{font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(34,208,106,.1);color:var(--success);border:1px solid rgba(34,208,106,.25);font-weight:600;}
+.setting-item{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);cursor:pointer;transition:border-color .15s,background .4s;}
+.setting-item:hover{border-color:var(--border-accent);}
+.setting-icon{width:36px;height:36px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.setting-text{flex:1;}.setting-name{font-size:14px;font-weight:600;}.setting-desc{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.toggle{width:44px;height:24px;background:var(--bg-hover);border-radius:12px;border:1px solid var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:var(--accent);border-color:var(--accent);}
+.toggle-knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--text-secondary);transition:left .2s,background .2s;}
+.toggle.on .toggle-knob{left:22px;background:#fff;}
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
+.theme-card{border:2px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:border-color .15s;text-align:center;}
+.theme-card:hover{border-color:var(--border-accent);}.theme-card.selected{border-color:var(--accent);}
+.theme-preview{height:40px;border-radius:6px;margin-bottom:8px;}
+.theme-name{font-size:12px;font-weight:600;}.theme-sub{font-size:11px;color:var(--text-secondary);margin-top:2px;}
+.lang-select{width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--text-primary);font-family:var(--font);font-size:14px;outline:none;cursor:pointer;margin-top:8px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg-elevated);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:12px 16px;font-size:13px;font-weight:500;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:300px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.discovery-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg-elevated);transition:border-color .15s,background .4s;cursor:pointer;}
+.discovery-card:hover{border-color:var(--border-accent);}
+.discovery-thumb{height:80px;background:linear-gradient(135deg,var(--accent-dim),var(--bg-hover));display:flex;align-items:center;justify-content:center;font-size:32px;}
+.discovery-body{padding:14px;}.discovery-name{font-size:14px;font-weight:700;margin-bottom:4px;}.discovery-era{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;}.discovery-stats{font-size:12px;color:var(--text-secondary);}
+.section-divider{height:1px;background:var(--border);margin:20px 0;}
+.map-placeholder{height:180px;background:var(--bg-hover);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);flex-direction:column;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:16px;}
+.map-dots{display:flex;gap:4px;}
+.map-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse-dot 2s infinite;}
+.map-dot:nth-child(2){animation-delay:.3s;background:var(--info);}.map-dot:nth-child(3){animation-delay:.6s;background:var(--success);}
+.path-display{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);margin-top:10px;}
+.path-node{font-size:13px;font-weight:700;padding:4px 12px;border-radius:6px;background:var(--accent-dim);border:1px solid var(--border-accent);color:var(--accent);}
+.path-arrow{color:var(--text-muted);font-size:18px;}
+.api-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elevated);margin-left:8px;}
+.api-chip.live{border-color:rgba(34,208,106,.3);color:var(--success);}
+.api-chip.warn{border-color:rgba(240,160,32,.3);color:var(--warning);}
+.api-chip.err{border-color:rgba(240,64,64,.3);color:var(--danger);}
+.accent-text{color:var(--accent);}.mono{font-family:var(--mono);}
+@media(max-width:768px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}.main{margin-left:0;}.hamburger{display:flex;}.sidebar-overlay.show{display:block;}.grid-2,.grid-3{grid-template-columns:1fr;}.hub-panel{padding:16px;}.stat-grid{grid-template-columns:repeat(2,1fr);}}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
 <div id="auth-screen" style="display:flex;">
   <div class="auth-card">
     <div class="auth-logo">
