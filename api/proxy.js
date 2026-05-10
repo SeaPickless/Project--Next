@@ -1,491 +1,481 @@
-// api/proxy.js — ProjectNextProxy
-// Centralized Roblox API gateway for Project Next
-// Handles: friends, followers, inventory, thumbnails, presence,
-//          friend actions (unfriend/block/unblock), XSRF auto-retry,
-//          item value search (catalog + Rolimons), mutual friends,
-//          connections finder (BFS), username resolution, devices/sessions
+// ProjectNextProxy — Centralized Roblox API Gateway
+// Uses each user's own OAuth Bearer token — no shared cookie needed.
+// Every user authenticates via Roblox OAuth and their token is forwarded here.
 
 const https = require('https');
-const http  = require('http');
-const { URL } = require('url');
 
-// ── CONFIG ─────────────────────────────────────────────────────────────────
-const ROBLOSECURITY = process.env.ROBLOSECURITY || '';
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+// ── CONFIG ────────────────────────────────────────────
+const ROBLOX_CLIENT_ID     = process.env.ROBLOX_CLIENT_ID || '';
+const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || '';
 
-let csrfToken = '';
+// Per-token XSRF cache (keyed by token so each user gets their own)
+const XCSRF_CACHE = {};
+const IN_MEMORY_CACHE = {};
+const CACHE_TTL = 30000; // 30s
 
-// ── CORS HEADERS ────────────────────────────────────────────────────────────
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-roblox-cookie');
+function cache(key, val) {
+  if (val !== undefined) { IN_MEMORY_CACHE[key] = { val, ts: Date.now() }; return val; }
+  const e = IN_MEMORY_CACHE[key];
+  return (e && Date.now() - e.ts < CACHE_TTL) ? e.val : null;
 }
 
-// ── HTTP FETCH HELPER ───────────────────────────────────────────────────────
-function httpFetch(urlStr, options = {}) {
+// ── CORE REQUEST FUNCTION ────────────────────────────
+// bearerToken = the user's OAuth access_token sent from frontend
+function robloxFetch(url, opts = {}, bearerToken = '') {
   return new Promise((resolve, reject) => {
-    const url = new URL(urlStr);
-    const lib = url.protocol === 'https:' ? https : http;
-    const reqOpts = {
-      hostname: url.hostname,
-      path: url.pathname + url.search,
-      method: options.method || 'GET',
-      headers: {
-        'User-Agent': 'ProjectNext/1.0',
-        'Accept': 'application/json',
-        ...(options.headers || {}),
-      },
+    const parsed = new URL(url);
+    const xcsrf = XCSRF_CACHE[bearerToken] || '';
+    const headers = {
+      'Authorization': bearerToken ? `Bearer ${bearerToken}` : undefined,
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36',
+      'Accept': 'application/json',
+      'Content-Type': opts.body ? 'application/json' : undefined,
+      ...(opts.headers || {}),
     };
-    const req = lib.request(reqOpts, (res) => {
+    if (xcsrf) headers['x-csrf-token'] = xcsrf;
+    // Remove undefined headers
+    Object.keys(headers).forEach(k => headers[k] === undefined && delete headers[k]);
+
+    const bodyStr = opts.body ? JSON.stringify(opts.body) : undefined;
+    if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
+
+    const reqOpts = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: opts.method || 'GET',
+      headers,
+    };
+
+    const req = https.request(reqOpts, (res) => {
+      // Capture new XSRF token — store per user token
+      const newXcsrf = res.headers['x-csrf-token'];
+      if (newXcsrf && bearerToken) XCSRF_CACHE[bearerToken] = newXcsrf;
+
       let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }));
+      res.on('data', d => data += d);
+      res.on('end', () => {
+        // Auto-retry once on 403 with new XSRF token
+        if (res.statusCode === 403 && newXcsrf && !opts._retried) {
+          return resolve(robloxFetch(url, { ...opts, _retried: true }, bearerToken));
+        }
+        resolve({ status: res.statusCode, body: data, headers: res.headers });
+      });
     });
     req.on('error', reject);
-    if (options.body) req.write(options.body);
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
 }
 
-// ── ROBLOX AUTH HEADERS ─────────────────────────────────────────────────────
-function rbxHeaders(extra = {}) {
-  return {
-    'Cookie': `.ROBLOSECURITY=${ROBLOSECURITY}`,
-    'Content-Type': 'application/json',
-    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    ...extra,
-  };
+async function rbx(url, opts = {}, bearerToken = '') {
+  const r = await robloxFetch(url, opts, bearerToken);
+  try { return { ok: r.status >= 200 && r.status < 300, status: r.status, data: JSON.parse(r.body) }; }
+  catch (_) { return { ok: false, status: r.status, data: {} }; }
 }
 
-// ── AUTHENTICATED REQUEST WITH AUTO XSRF RETRY ──────────────────────────────
-async function rbxRequest(urlStr, options = {}) {
-  const result = await httpFetch(urlStr, { ...options, headers: { ...rbxHeaders(), ...(options.headers || {}) } });
-  // If 403 and token validation failed, refresh XSRF and retry once
-  if (result.status === 403 && result.headers['x-csrf-token']) {
-    csrfToken = result.headers['x-csrf-token'];
-    return await httpFetch(urlStr, { ...options, headers: { ...rbxHeaders(), ...(options.headers || {}) } });
-  }
-  // Update XSRF token if provided
-  if (result.headers['x-csrf-token']) csrfToken = result.headers['x-csrf-token'];
-  return result;
+// ── THUMBNAIL HELPER ─────────────────────────────────
+async function fetchThumbs(userIds, type = 'avatar-headshot') {
+  if (!userIds.length) return {};
+  const ids = userIds.slice(0, 100).join(',');
+  const url = type === 'asset'
+    ? `https://thumbnails.roblox.com/v1/assets?assetIds=${ids}&size=110x110&format=Png`
+    : `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids}&size=100x100&format=Png&isCircular=true`;
+  const r = await rbx(url);
+  const map = {};
+  (r.data?.data || []).forEach(t => { if (t.state === 'Completed') map[t.targetId] = t.imageUrl; });
+  return map;
 }
 
-// ── PARSE SAFE JSON ─────────────────────────────────────────────────────────
-function parseJSON(str) {
-  try { return JSON.parse(str); } catch (_) { return null; }
+// ── RESOLVE USERNAME ──────────────────────────────────
+async function resolveUsername(username) {
+  const r = await rbx('https://users.roblox.com/v1/usernames/users', {
+    method: 'POST', body: { usernames: [username], excludeBannedUsers: true }
+  });
+  return (r.data?.data || [])[0] || null;
 }
 
-// ── SEND JSON RESPONSE ──────────────────────────────────────────────────────
-function sendJSON(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(data));
-}
+// ── ACTIONS ───────────────────────────────────────────
+const ACTIONS = {
 
-// ════════════════════════════════════════════════════════════════════════════
-//  ACTION HANDLERS
-// ════════════════════════════════════════════════════════════════════════════
-
-// GET friends list with presence enrichment
-async function actionFriends(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-
-  const friendsRes = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/friends`);
-  const friendsData = parseJSON(friendsRes.body) || {};
-  const friends = friendsData.data || [];
-
-  if (!friends.length) return { data: [] };
-
-  // Fetch presence for all friends
-  const userIds = friends.map(f => f.id || f.userId).filter(Boolean);
-  let presenceMap = {};
-  try {
-    const presRes = await rbxRequest('https://presence.roblox.com/v1/presence/users', {
-      method: 'POST',
-      body: JSON.stringify({ userIds }),
+  // FRIENDS
+  async friends({ userId }) {
+    if (!userId) throw new Error('userId required');
+    const cached = cache('friends_' + userId);
+    if (cached) return cached;
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/friends`);
+    if (!r.ok) throw new Error('Friends API error ' + r.status);
+    const friends = r.data?.data || [];
+    const ids = friends.map(f => f.id || f.userId).filter(Boolean);
+    // Fetch presence
+    let presenceMap = {};
+    if (ids.length) {
+      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
+      (pr.data?.userPresences || []).forEach(p => { presenceMap[p.userId] = p; });
+    }
+    // Fetch thumbnails
+    const thumbMap = await fetchThumbs(ids);
+    const enriched = friends.map(f => {
+      const uid = f.id || f.userId;
+      const pres = presenceMap[uid] || {};
+      return { ...f, userPresenceType: pres.userPresenceType || 0, lastLocation: pres.lastLocation || '', gameName: pres.lastLocation || '', thumbnailUrl: thumbMap[uid] || '' };
     });
-    const presData = parseJSON(presRes.body) || {};
-    (presData.userPresences || []).forEach(p => {
-      presenceMap[p.userId] = p;
-    });
-  } catch (_) {}
+    return cache('friends_' + userId, { data: enriched });
+  },
 
-  const enriched = friends.map(f => {
-    const uid = f.id || f.userId;
-    const presence = presenceMap[uid] || {};
+  // FOLLOWERS
+  async followers({ userId }) {
+    if (!userId) throw new Error('userId required');
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Followers API error');
+    const users = r.data?.data || [];
+    const ids = users.map(u => u.id || u.userId).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids);
+    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
+  },
+
+  // FOLLOWING
+  async following({ userId }) {
+    if (!userId) throw new Error('userId required');
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Following API error');
+    const users = r.data?.data || [];
+    const ids = users.map(u => u.id || u.userId).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids);
+    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
+  },
+
+  // COUNT (followers/following/friends)
+  async count({ userId }) {
+    const [fol, fow, fri] = await Promise.allSettled([
+      rbx(`https://friends.roblox.com/v1/users/${userId}/followers/count`),
+      rbx(`https://friends.roblox.com/v1/users/${userId}/followings/count`),
+      rbx(`https://friends.roblox.com/v1/users/${userId}/friends/count`),
+    ]);
     return {
-      ...f,
-      userPresenceType: presence.userPresenceType || 0,
-      lastLocation: presence.lastLocation || '',
-      gameId: presence.gameId || null,
-      placeId: presence.placeId || null,
+      followers: fol.status === 'fulfilled' ? (fol.value.data?.count || 0) : 0,
+      following: fow.status === 'fulfilled' ? (fow.value.data?.count || 0) : 0,
+      friends: fri.status === 'fulfilled' ? (fri.value.data?.count || 0) : 0,
     };
-  });
+  },
 
-  return { data: enriched };
-}
+  // PENDING FRIEND REQUESTS
+  async pending({ userId }) {
+    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`);
+    if (!r.ok) throw new Error('Pending API error');
+    const users = r.data?.data || [];
+    const ids = users.map(u => u.id || u.userId).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids);
+    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
+  },
 
-// GET followers list
-async function actionFollowers(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`);
-  return parseJSON(r.body) || { data: [] };
-}
+  // FRIEND REQUEST ACTIONS
+  async acceptRequest({ targetId }, token) {
+    const r = await rbx(`https://friends.roblox.com/v1/users/${targetId}/accept-friend-request`, { method: 'POST' }, token);
+    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Accept failed');
+    return { success: true };
+  },
 
-// GET following list
-async function actionFollowing(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`);
-  return parseJSON(r.body) || { data: [] };
-}
+  async declineRequest({ targetId }, token) {
+    const r = await rbx(`https://friends.roblox.com/v1/users/${targetId}/decline-friend-request`, { method: 'POST' }, token);
+    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Decline failed');
+    return { success: true };
+  },
 
-// GET follower count
-async function actionFollowersCount(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/followers/count`);
-  return parseJSON(r.body) || { count: 0 };
-}
+  // PROFILE ADVANCED (user.advanced:read)
+  async profileAdvanced({}, token) {
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx('https://users.roblox.com/v1/users/authenticated/country-region', {}, token);
+    const p = await rbx('https://premiumfeatures.roblox.com/v1/users/validate-membership', {}, token);
+    const v = await rbx('https://apis.roblox.com/user-verification/v1/verified-roles', {}, token);
+    return {
+      isPremium: p.data?.isPremium || p.ok,
+      isVerified: (v.data?.roles || []).length > 0,
+      countryCode: r.data?.countryRegionCode || null,
+    };
+  },
 
-// GET following count
-async function actionFollowingCount(params) {
-  const userId = params.get('userId');
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/followings/count`);
-  return parseJSON(r.body) || { count: 0 };
-}
+  // SOCIAL LINKS (user.social:read)
+  async profileSocial({}, token) {
+    if (!token) throw new Error('Authentication required');
+    const uid = await rbx('https://apis.roblox.com/oauth/v1/userinfo', {}, token);
+    const userId = uid.data?.sub;
+    if (!userId) throw new Error('Could not resolve user ID');
+    const r = await rbx(`https://users.roblox.com/v1/users/${userId}/social-links/list`, {}, token);
+    return { socialLinks: r.data?.data || [] };
+  },
 
-// GET friends count
-async function actionFriendsCount(params) {
-  const userId = params.get('userId');
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${userId}/friends/count`);
-  return parseJSON(r.body) || { count: 0 };
-}
+  // BADGES (legacy-badge:manage)
+  async badges({ universeId }, token) {
+    if (!universeId) throw new Error('universeId required');
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx(`https://badges.roblox.com/v1/universes/${universeId}/badges?limit=100&sortOrder=Desc`, {}, token);
+    if (!r.ok) throw new Error('Could not load badges: ' + r.status);
+    const badges = r.data?.data || [];
+    const ids = badges.map(b => b.id).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids, 'asset');
+    return { data: badges.map(b => ({ ...b, thumbnailUrl: thumbMap[b.id] || b.displayIconImageId ? `https://www.roblox.com/asset-thumbnail/image?assetId=${b.displayIconImageId}&width=64&height=64&format=png` : '' })) };
+  },
 
-// GET friend requests (pending)
-async function actionFriendRequests(params) {
-  const r = await rbxRequest(`https://friends.roblox.com/v1/my/friends/requests?limit=100`);
-  return parseJSON(r.body) || { data: [] };
-}
+  // MY ASSETS (legacy-asset:manage)
+  async myAssets({ assetType = 'Model' }, token) {
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx(`https://develop.roblox.com/v1/user/assets?assetType=${encodeURIComponent(assetType)}&limit=50&sortOrder=Desc`, {}, token);
+    if (!r.ok) throw new Error('Could not load assets: ' + r.status);
+    const assets = r.data?.data || [];
+    const ids = assets.map(a => a.id).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids, 'asset');
+    return { data: assets.map(a => ({ ...a, thumbnailUrl: thumbMap[a.id] || '' })) };
+  },
 
-// POST unfriend
-async function actionUnfriend(params) {
-  const targetId = params.get('targetId');
-  if (!targetId) return { error: 'targetId required' };
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${targetId}/unfriend`, { method: 'POST' });
-  if (r.status === 200) return { success: true };
-  return { error: parseJSON(r.body)?.errors?.[0]?.message || 'Unfriend failed' };
-}
+  // GAME PASSES (game-pass:read)
+  async gamepasses({ universeId }, token) {
+    if (!universeId) throw new Error('universeId required');
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx(`https://games.roblox.com/v1/games/${universeId}/game-passes?limit=100&sortOrder=Desc`, {}, token);
+    if (!r.ok) throw new Error('Could not load game passes: ' + r.status);
+    return { data: r.data?.data || [] };
+  },
 
-// POST block
-async function actionBlock(params, userId) {
-  const targetId = params.get('targetId');
-  if (!targetId || !userId) return { error: 'targetId and userId required' };
-  const r = await rbxRequest(`https://apis.roblox.com/user-blocking-api/v1/users/${userId}/block-user/${targetId}`, { method: 'POST' });
-  if (r.status === 200) return { success: true };
-  return { error: parseJSON(r.body)?.errors?.[0]?.message || 'Block failed' };
-}
+  // DEV PRODUCTS (developer-product:read)
+  async devProducts({ universeId }, token) {
+    if (!universeId) throw new Error('universeId required');
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx(`https://apis.roblox.com/developer-products/v1/universes/${universeId}/developerproducts?pageSize=50`, {}, token);
+    if (!r.ok) throw new Error('Could not load developer products: ' + r.status);
+    return { data: r.data?.developerProducts || r.data?.data || [] };
+  },
 
-// POST unblock
-async function actionUnblock(params, userId) {
-  const targetId = params.get('targetId');
-  if (!targetId || !userId) return { error: 'targetId and userId required' };
-  const r = await rbxRequest(`https://apis.roblox.com/user-blocking-api/v1/users/${userId}/unblock-user/${targetId}`, { method: 'POST' });
-  if (r.status === 200) return { success: true };
-  return { error: parseJSON(r.body)?.errors?.[0]?.message || 'Unblock failed' };
-}
-
-// POST accept friend request
-async function actionAcceptRequest(params) {
-  const targetId = params.get('targetId');
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${targetId}/accept-friend-request`, { method: 'POST' });
-  return r.status === 200 ? { success: true } : { error: 'Accept failed' };
-}
-
-// POST decline friend request
-async function actionDeclineRequest(params) {
-  const targetId = params.get('targetId');
-  const r = await rbxRequest(`https://friends.roblox.com/v1/users/${targetId}/decline-friend-request`, { method: 'POST' });
-  return r.status === 200 ? { success: true } : { error: 'Decline failed' };
-}
-
-// GET inventory
-async function actionInventory(params) {
-  const userId = params.get('userId');
-  const assetTypes = params.get('assetTypes') || '8,41,42,43,44,45,46,47,48';
-  const limit = params.get('limit') || '100';
-  if (!userId) return { error: 'userId required' };
-  const r = await rbxRequest(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=${assetTypes}&limit=${limit}&sortOrder=Desc`);
-  return parseJSON(r.body) || { data: [] };
-}
-
-// GET inventory audit (limiteds with RAP)
-async function actionAudit(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-
-  // Fetch collectibles/limiteds
-  const r = await rbxRequest(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
-  const data = parseJSON(r.body) || {};
-  const items = (data.data || []).map(i => ({
-    ...i,
-    _group: 'limiteds',
-    rap: i.recentAveragePrice || 0,
-    name: i.name || i.assetName,
-  }));
-
-  // Fetch gamepasses
-  const gpR = await rbxRequest(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=34&limit=100`);
-  const gpData = parseJSON(gpR.body) || {};
-  const gpItems = (gpData.data || []).map(i => ({ ...i, _group: 'gamepasses', rap: 0 }));
-
-  return { data: [...items, ...gpItems] };
-}
-
-// GET RAP (limiteds with recent average price)
-async function actionRap(params) {
-  const userId = params.get('userId');
-  if (!userId) return { error: 'userId required' };
-  const r = await rbxRequest(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
-  const data = parseJSON(r.body) || {};
-  const items = (data.data || []).map(i => ({ ...i, rap: i.recentAveragePrice || 0 }));
-  const totalRap = items.reduce((s, i) => s + (i.rap || 0), 0);
-  return { data: items, totalRap };
-}
-
-// GET thumbnails (avatar-headshot or assets)
-async function actionThumbnails(params) {
-  const type = params.get('type') || 'avatar-headshot';
-  const size = params.get('size') || '100x100';
-
-  if (type === 'avatar-headshot') {
-    const userIds = params.get('userIds') || '';
-    const r = await httpFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userIds}&size=${size}&format=Png&isCircular=true`);
-    return parseJSON(r.body) || { data: [] };
-  }
-  if (type === 'assets') {
-    const assetIds = params.get('assetIds') || '';
-    const r = await httpFetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${assetIds}&size=${size}&format=Png`);
-    return parseJSON(r.body) || { data: [] };
-  }
-  if (type === 'avatar') {
-    const userIds = params.get('userIds') || '';
-    const r = await httpFetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userIds}&size=${size}&format=Png`);
-    return parseJSON(r.body) || { data: [] };
-  }
-  return { error: 'Unknown thumbnail type' };
-}
-
-// GET presence for multiple users
-async function actionPresence(params) {
-  const userIds = (params.get('userIds') || '').split(',').map(Number).filter(Boolean);
-  const r = await rbxRequest('https://presence.roblox.com/v1/presence/users', {
-    method: 'POST',
-    body: JSON.stringify({ userIds }),
-  });
-  return parseJSON(r.body) || { userPresences: [] };
-}
-
-// GET resolve username → userId
-async function actionResolveUsername(params) {
-  const username = params.get('username');
-  if (!username) return { error: 'username required' };
-  const r = await httpFetch('https://users.roblox.com/v1/usernames/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
-  });
-  return parseJSON(r.body) || { data: [] };
-}
-
-// GET mutual friends between authed user and target
-async function actionMutuals(params) {
-  const userId = params.get('userId');      // current user
-  const targetId = params.get('targetId');  // target user
-  if (!userId || !targetId) return { error: 'userId and targetId required' };
-
-  const [myFriendsR, targetFriendsR] = await Promise.all([
-    rbxRequest(`https://friends.roblox.com/v1/users/${userId}/friends`),
-    rbxRequest(`https://friends.roblox.com/v1/users/${targetId}/friends`),
-  ]);
-  const myFriends = (parseJSON(myFriendsR.body) || {}).data || [];
-  const targetFriends = (parseJSON(targetFriendsR.body) || {}).data || [];
-  const targetSet = new Set(targetFriends.map(f => f.id || f.userId));
-  const mutuals = myFriends.filter(f => targetSet.has(f.id || f.userId));
-  return { data: mutuals, count: mutuals.length };
-}
-
-// GET BFS connections finder
-async function actionConnections(params) {
-  const userId = params.get('userId');
-  const targetUsername = params.get('targetUsername');
-  const maxDepth = Math.min(parseInt(params.get('depth') || '3'), 5);
-  if (!userId || !targetUsername) return { error: 'userId and targetUsername required' };
-
-  // Cache to avoid refetching same user
-  const friendsCache = {};
-  async function getFriends(uid) {
-    if (friendsCache[uid]) return friendsCache[uid];
-    try {
-      const r = await rbxRequest(`https://friends.roblox.com/v1/users/${uid}/friends`);
-      const d = parseJSON(r.body) || {};
-      friendsCache[uid] = d.data || [];
-    } catch (_) { friendsCache[uid] = []; }
-    return friendsCache[uid];
-  }
-
-  const target = targetUsername.toLowerCase();
-  const visited = new Set([String(userId)]);
-  // BFS queue: [{friends, path, pathData}]
-  const myFriends = await getFriends(userId);
-  const myUser = { name: params.get('myUsername') || 'You', id: userId };
-
-  async function bfs(currentFriends, path, pathData, depth) {
-    if (depth > maxDepth) return null;
-    for (const f of currentFriends) {
-      const fname = (f.name || f.displayName || '').toLowerCase();
-      const fdname = (f.displayName || f.name || '').toLowerCase();
-      if (fname === target || fdname === target) {
-        return { found: true, hops: depth, path: [...path, f.displayName || f.name], pathData: [...pathData, { name: f.displayName || f.name, id: f.id || f.userId }] };
+  // SEND EXPERIENCE NOTIFICATION (user.user-notification:write)
+  async sendNotif({ universeId, targetUserId, message, launchData }, token) {
+    if (!token) throw new Error('Authentication required');
+    if (!universeId || !message) throw new Error('universeId and message required');
+    const body = {
+      universeId: Number(universeId),
+      targetUserId: Number(targetUserId),
+      payload: {
+        messageId: `pn_${Date.now()}`,
+        type: 'ExperienceInvitation',
+        message,
+        ...(launchData ? { launchData } : {}),
       }
+    };
+    const r = await rbx('https://apis.roblox.com/user-notification/v1/notifications', { method: 'POST', body }, token);
+    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Send failed: ' + r.status);
+    return { success: true };
+  },
+  async notifPrefs({}, token) {
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/opt-in-status', {}, token);
+    if (!r.ok) throw new Error('Could not load notification preferences');
+    return { data: r.data?.data || [] };
+  },
+
+  // TOGGLE EXPERIENCE NOTIFICATION (legacy-universe.following:write)
+  async setNotif({ universeId, enable }, token) {
+    if (!token) throw new Error('Authentication required');
+    if (!universeId) throw new Error('universeId required');
+    const endpoint = enable
+      ? `https://apis.roblox.com/experience-notifications/v1/opt-in?universeId=${universeId}`
+      : `https://apis.roblox.com/experience-notifications/v1/opt-out?universeId=${universeId}`;
+    const r = await rbx(endpoint, { method: 'POST' }, token);
+    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Failed to update notification');
+    return { success: true };
+  },
+
+  // LIST RECENT EXPERIENCE NOTIFICATIONS
+  async notifList({}, token) {
+    if (!token) throw new Error('Authentication required');
+    const r = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {}, token);
+    if (!r.ok) throw new Error('Could not load notifications');
+    const items = r.data?.notifications || r.data?.data || [];
+    return { data: items };
+  },
+
+  // PRESENCE
+  async presence({ userIds }) {
+    const ids = String(userIds).split(',').map(Number).filter(Boolean);
+    if (!ids.length) throw new Error('userIds required');
+    const r = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
+    return { data: r.data?.userPresences || [] };
+  },
+
+  // THUMBNAIL proxy
+  async thumbnail({ type, id, ids }) {
+    const allIds = ids ? String(ids).split(',').map(Number).filter(Boolean) : id ? [Number(id)] : [];
+    if (!allIds.length) throw new Error('id(s) required');
+    const map = await fetchThumbs(allIds, type === 'asset' ? 'asset' : 'avatar-headshot');
+    return { data: map };
+  },
+
+  // INVENTORY
+  async inventory({ userId }) {
+    if (!userId) throw new Error('userId required');
+    const r = await rbx(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=8,41,42,43,44,45,46,47,48&limit=25&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Inventory API error ' + r.status);
+    const items = r.data?.data || [];
+    const assetIds = items.map(i => i.assetId).filter(Boolean);
+    const thumbMap = await fetchThumbs(assetIds, 'asset');
+    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })) };
+  },
+
+  // ACCOUNT VALUE / RAP
+  async value({ userId }) {
+    if (!userId) throw new Error('userId required');
+    // Collectibles (limiteds with RAP)
+    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Value API error');
+    const items = r.data?.data || [];
+    let totalRap = 0;
+    items.forEach(i => { totalRap += i.recentAveragePrice || 0; });
+    const assetIds = items.map(i => i.assetId).filter(Boolean);
+    const thumbMap = await fetchThumbs(assetIds, 'asset');
+    return {
+      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })),
+      totalRap,
+    };
+  },
+
+  // CATALOG ITEM SEARCH
+  async itemSearch({ q }) {
+    if (!q) throw new Error('q required');
+    const encoded = encodeURIComponent(q);
+    let r = await rbx(`https://catalog.roblox.com/v1/search/items/details?Category=2&Keyword=${encoded}&Limit=10&SortType=Relevance`);
+    let items = r.data?.data || [];
+    if (!items.length) {
+      r = await rbx(`https://catalog.roblox.com/v1/search/items/details?Keyword=${encoded}&Limit=10`);
+      items = r.data?.data || [];
     }
-    if (depth < maxDepth) {
-      for (const f of currentFriends.slice(0, 12)) {
-        const fid = String(f.id || f.userId);
-        if (visited.has(fid)) continue;
-        visited.add(fid);
-        const nextFriends = await getFriends(fid);
-        const result = await bfs(nextFriends, [...path, f.displayName || f.name], [...pathData, { name: f.displayName || f.name, id: fid }], depth + 1);
-        if (result) return result;
+    const ids = items.map(i => i.id).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids, 'asset');
+    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.id] || '' })) };
+  },
+
+  // MUTUAL FRIENDS
+  async mutuals({ userId, targetUsername }) {
+    if (!targetUsername) throw new Error('targetUsername required');
+    const [myFriendsR, targetUser] = await Promise.all([
+      ACTIONS.friends({ userId }),
+      resolveUsername(targetUsername),
+    ]);
+    if (!targetUser) throw new Error('User not found: ' + targetUsername);
+    const targetFriendsR = await rbx(`https://friends.roblox.com/v1/users/${targetUser.id}/friends`);
+    const targetIds = new Set((targetFriendsR.data?.data || []).map(f => f.id || f.userId));
+    const myFriends = myFriendsR.data || [];
+    const mutuals = myFriends.filter(f => targetIds.has(f.id || f.userId));
+    return { data: mutuals, count: mutuals.length };
+  },
+
+  // CONNECTIONS BFS
+  async connections({ userId, targetUsername, depth = 3 }) {
+    const maxDepth = Math.min(Number(depth) || 3, 5);
+    if (!targetUsername) throw new Error('targetUsername required');
+    const targetUser = await resolveUsername(targetUsername);
+    if (!targetUser) throw new Error('User not found');
+    const targetId = targetUser.id;
+    const myUsername = ''; // resolved by frontend
+    // BFS
+    const queue = [[userId]];
+    const visited = new Set([String(userId)]);
+    for (let hop = 1; hop <= maxDepth; hop++) {
+      const nextQueue = [];
+      for (const path of queue) {
+        const lastId = path[path.length - 1];
+        const cacheKey = 'bfs_' + lastId;
+        let friends = cache(cacheKey);
+        if (!friends) {
+          const r = await rbx(`https://friends.roblox.com/v1/users/${lastId}/friends`);
+          friends = r.data?.data || [];
+          cache(cacheKey, friends);
+        }
+        for (const f of friends) {
+          const fid = String(f.id || f.userId);
+          if (fid === String(targetId)) {
+            const fullPath = [...path, fid];
+            const pathIds = fullPath.map(Number).filter(Boolean);
+            const thumbMap = await fetchThumbs(pathIds);
+            return {
+              found: true,
+              hops: hop,
+              pathIds: fullPath,
+              thumbMap,
+              targetName: targetUser.name,
+            };
+          }
+          if (!visited.has(fid)) {
+            visited.add(fid);
+            nextQueue.push([...path, fid]);
+          }
+        }
       }
+      queue.length = 0;
+      queue.push(...nextQueue.slice(0, 50)); // limit BFS width
+      if (!queue.length) break;
     }
-    return null;
+    return { found: false };
+  },
+
+  // GET DEVICES (Roblox session management)
+  async getDevices() {
+    // Roblox doesn't expose device list via public API, return browser session only
+    // Real device list not available without undocumented endpoints
+    return {
+      data: [],
+      note: 'Roblox does not expose device sessions via API. Manage sessions at roblox.com/my/account#security',
+    };
+  },
+
+  // REVOKE DEVICE
+  async revokeDevice({ deviceId }) {
+    // Direct Roblox session revocation - open security page
+    return { redirectUrl: 'https://www.roblox.com/my/account#!/security', note: 'Redirect to Roblox security' };
+  },
+
+  // USER INFO by userId
+  async userInfo({ userId }) {
+    const r = await rbx(`https://users.roblox.com/v1/users/${userId}`);
+    if (!r.ok) throw new Error('User not found');
+    const thumbMap = await fetchThumbs([userId]);
+    return { ...r.data, thumbnailUrl: thumbMap[userId] || '' };
+  },
+};
+
+// ── MAIN HANDLER ─────────────────────────────────────
+module.exports = async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
+  // Parse action from query or body
+  let params = { ...req.query };
+  if (req.method === 'POST' && req.body) {
+    Object.assign(params, typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
   }
 
-  const result = await bfs(myFriends, [myUser.name], [myUser], 1);
-  if (result) return result;
-  return { found: false, reason: `Not found within ${maxDepth} hops.` };
-}
-
-// GET item value search (catalog + Rolimons)
-async function actionItemSearch(params) {
-  const q = params.get('q') || '';
-  if (!q) return { error: 'q required' };
-
-  // Search Roblox catalog
-  const r = await httpFetch(`https://catalog.roblox.com/v1/search/items/details?Category=2&Keyword=${encodeURIComponent(q)}&Limit=10&SortType=Relevance`);
-  let items = (parseJSON(r.body) || {}).data || [];
-  if (!items.length) {
-    const r2 = await httpFetch(`https://catalog.roblox.com/v1/search/items/details?Keyword=${encodeURIComponent(q)}&Limit=10`);
-    items = (parseJSON(r2.body) || {}).data || [];
+  const action = params.action;
+  if (!action) {
+    res.status(400).json({ error: 'Missing action parameter' });
+    return;
   }
 
-  // Try Rolimons for RAP data on limiteds
-  let rolimonsData = {};
-  try {
-    const rr = await httpFetch('https://www.rolimons.com/itemapi/itemdetails');
-    const rd = parseJSON(rr.body) || {};
-    rolimonsData = rd.items || {};
-  } catch (_) {}
+  // Extract bearer token from Authorization header
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (params.token || '');
 
-  const enriched = items.map(i => {
-    const rap = rolimonsData[i.id]?.[3] || null;
-    return { ...i, rap };
-  });
-
-  return { data: enriched };
-}
-
-// GET device sessions (Roblox doesn't expose a public device API — returns current session info)
-async function actionGetDevices(params) {
-  // Roblox doesn't have a real device listing API on Open Cloud
-  // We return what we can detect from the current session
-  return {
-    data: [
-      { device: 'Current Session', status: 'active', current: true, note: 'Roblox does not expose a public device listing API. Manage sessions at roblox.com/my/account#!/security' }
-    ]
-  };
-}
-
-// POST revoke device / logout session
-async function actionRevokeDevice(params) {
-  // Roblox session revocation requires cookie-based logout
-  // Redirect user to security page for manual revoke
-  return { success: false, message: 'Roblox requires manual session revocation at roblox.com/my/account#!/security', url: 'https://www.roblox.com/my/account#!/security' };
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  MAIN HANDLER
-// ════════════════════════════════════════════════════════════════════════════
-module.exports = async function handler(req, res) {
-  setCors(res);
-
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    return res.end();
-  }
-
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const params = parsedUrl.searchParams;
-  const action = params.get('action') || '';
-  const userId = params.get('userId') || '';
-
-  // Read body for POST requests
-  let bodyStr = '';
-  if (req.method === 'POST') {
-    await new Promise(resolve => {
-      req.on('data', chunk => { bodyStr += chunk; });
-      req.on('end', resolve);
-    });
-    // Merge body params into params
-    try {
-      const bodyData = JSON.parse(bodyStr);
-      Object.entries(bodyData).forEach(([k, v]) => { if (!params.has(k)) params.set(k, String(v)); });
-    } catch (_) {}
+  const handler = ACTIONS[action];
+  if (!handler) {
+    res.status(404).json({ error: 'Unknown action: ' + action });
+    return;
   }
 
   try {
-    let result;
-
-    switch (action) {
-      // ── READ ACTIONS (GET) ─────────────────────────────
-      case 'friends':           result = await actionFriends(params); break;
-      case 'followers':         result = await actionFollowers(params); break;
-      case 'following':         result = await actionFollowing(params); break;
-      case 'followersCount':    result = await actionFollowersCount(params); break;
-      case 'followingCount':    result = await actionFollowingCount(params); break;
-      case 'friendsCount':      result = await actionFriendsCount(params); break;
-      case 'friendRequests':    result = await actionFriendRequests(params); break;
-      case 'inventory':         result = await actionInventory(params); break;
-      case 'audit':             result = await actionAudit(params); break;
-      case 'rap':               result = await actionRap(params); break;
-      case 'thumbnails':        result = await actionThumbnails(params); break;
-      case 'presence':          result = await actionPresence(params); break;
-      case 'resolveUsername':   result = await actionResolveUsername(params); break;
-      case 'mutuals':           result = await actionMutuals(params); break;
-      case 'connections':       result = await actionConnections(params); break;
-      case 'itemSearch':        result = await actionItemSearch(params); break;
-      case 'getDevices':        result = await actionGetDevices(params); break;
-
-      // ── WRITE ACTIONS (POST) ───────────────────────────
-      case 'unfriend':          result = await actionUnfriend(params); break;
-      case 'block':             result = await actionBlock(params, userId); break;
-      case 'unblock':           result = await actionUnblock(params, userId); break;
-      case 'acceptRequest':     result = await actionAcceptRequest(params); break;
-      case 'declineRequest':    result = await actionDeclineRequest(params); break;
-      case 'revokeDevice':      result = await actionRevokeDevice(params); break;
-      case 'logoutSession':     result = await actionRevokeDevice(params); break;
-
-      default:
-        return sendJSON(res, 400, { error: `Unknown action: ${action}`, availableActions: ['friends','followers','following','followersCount','followingCount','friendsCount','friendRequests','inventory','audit','rap','thumbnails','presence','resolveUsername','mutuals','connections','itemSearch','getDevices','unfriend','block','unblock','acceptRequest','declineRequest','revokeDevice','logoutSession'] });
-    }
-
-    sendJSON(res, 200, result);
+    const result = await handler(params, bearerToken);
+    res.status(200).json(result);
   } catch (err) {
-    console.error('[proxy] error:', err);
-    sendJSON(res, 500, { error: err.message || 'Internal proxy error' });
+    console.error('[proxy] action=' + action, err.message);
+    res.status(500).json({ error: err.message });
   }
 };
+ 
