@@ -5,8 +5,24 @@
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/friends", "dest": "/api/friends.js" },
-    { "src": "/api/inventory", "dest": "/api/inventory.js" },
+    {
+      "src": "/api/friends",
+      "dest": "/api/friends.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-roblox-cookie"
+      }
+    },
+    {
+      "src": "/api/inventory",
+      "dest": "/api/inventory.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-roblox-cookie"
+      }
+    },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
