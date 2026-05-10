@@ -98,7 +98,7 @@ async function resolveUsername(username) {
 const ACTIONS = {
 
   // FRIENDS
-  async friends({ userId }) {
+  async friends({ userId }, token) {
     if (!userId) throw new Error('userId required');
     const cached = cache('friends_' + userId);
     if (cached) return cached;
@@ -109,7 +109,7 @@ const ACTIONS = {
     // Fetch presence
     let presenceMap = {};
     if (ids.length) {
-      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
+      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } }, token);
       (pr.data?.userPresences || []).forEach(p => { presenceMap[p.userId] = p; });
     }
     // Fetch thumbnails
@@ -123,9 +123,9 @@ const ACTIONS = {
   },
 
   // FOLLOWERS
-  async followers({ userId }) {
+  async followers({ userId }, token) {
     if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`);
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`, {}, token);
     if (!r.ok) throw new Error('Followers API error');
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
@@ -134,9 +134,9 @@ const ACTIONS = {
   },
 
   // FOLLOWING
-  async following({ userId }) {
+  async following({ userId }, token) {
     if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`);
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`, {}, token);
     if (!r.ok) throw new Error('Following API error');
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
@@ -159,8 +159,8 @@ const ACTIONS = {
   },
 
   // PENDING FRIEND REQUESTS
-  async pending({ userId }) {
-    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`);
+  async pending({ userId }, token) {
+    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`, {}, token);
     if (!r.ok) throw new Error('Pending API error');
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
@@ -478,4 +478,3 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
- 
