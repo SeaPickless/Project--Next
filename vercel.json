@@ -1,13 +1,13 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": "api/proxy.js", "use": "@vercel/node" },
+    { "src": "MainProjectNext.html", "use": "@vercel/static" }
   ],
   "routes": [
     {
-      "src": "/api/friends",
-      "dest": "/api/friends.js",
+      "src": "/api/proxy",
+      "dest": "/api/proxy.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
@@ -15,14 +15,14 @@
       }
     },
     {
-      "src": "/api/inventory",
-      "dest": "/api/inventory.js",
+      "src": "/api/proxy/(.*)",
+      "dest": "/api/proxy.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, x-roblox-cookie"
       }
     },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/MainProjectNext.html" }
   ]
 }
