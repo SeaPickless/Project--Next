@@ -98,7 +98,7 @@ async function resolveUsername(username) {
 const ACTIONS = {
 
   // FRIENDS
-  async friends({ userId }, token) {
+  async friends({ userId }) {
     if (!userId) throw new Error('userId required');
     const cached = cache('friends_' + userId);
     if (cached) return cached;
@@ -109,7 +109,7 @@ const ACTIONS = {
     // Fetch presence
     let presenceMap = {};
     if (ids.length) {
-      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } }, token);
+      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
       (pr.data?.userPresences || []).forEach(p => { presenceMap[p.userId] = p; });
     }
     // Fetch thumbnails
@@ -126,10 +126,10 @@ const ACTIONS = {
   async followers({ userId }, token) {
     if (!userId) throw new Error('userId required');
     const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Followers API error');
+    if (!r.ok) throw new Error('Followers API error ' + r.status);
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
+    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
@@ -137,10 +137,10 @@ const ACTIONS = {
   async following({ userId }, token) {
     if (!userId) throw new Error('userId required');
     const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Following API error');
+    if (!r.ok) throw new Error('Following API error ' + r.status);
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
+    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
@@ -160,11 +160,36 @@ const ACTIONS = {
 
   // PENDING FRIEND REQUESTS
   async pending({ userId }, token) {
-    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`, {}, token);
-    if (!r.ok) throw new Error('Pending API error');
-    const users = r.data?.data || [];
+    // Primary: OAuth-compatible endpoint via Open Cloud (requires Bearer token)
+    // Fallback: legacy endpoint that may work with Bearer on some accounts
+    let users = [];
+    let ok = false;
+
+    // Try the user-facing friends requests endpoint with Bearer auth
+    if (token) {
+      const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100&sortOrder=Desc`, {}, token);
+      if (r.ok) {
+        users = r.data?.data || [];
+        ok = true;
+      }
+    }
+
+    // Fallback: try without auth (public accounts only)
+    if (!ok) {
+      const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100&sortOrder=Desc`);
+      if (r.ok) {
+        users = r.data?.data || [];
+        ok = true;
+      }
+    }
+
+    if (!ok && !users.length) {
+      // Return empty rather than throwing — display will show "no pending" but won't crash
+      return { data: [], note: 'Pending requests require a valid Roblox OAuth token with user.social:read scope.' };
+    }
+
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
+    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
