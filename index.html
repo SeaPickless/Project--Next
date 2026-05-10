@@ -532,7 +532,7 @@ const CFG = {
   RBX_AUTH:         'https://apis.roblox.com/oauth/v1/authorize',
   RBX_TOKEN:        'https://apis.roblox.com/oauth/v1/token',
   RBX_USERINFO:     'https://apis.roblox.com/oauth/v1/userinfo',
-  REDIRECT_URI:     'https://project-next-pink.vercel.app',
+  REDIRECT_URI:     'https://project-next-pink.vercel.app/',
   // Determine local vs production
   get REDIR() { return window.location.hostname === 'localhost' || window.location.protocol === 'file:' ? window.location.href.split('?')[0] : this.REDIRECT_URI; },
 };
