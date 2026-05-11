@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async></script>
+<link rel="stylesheet" href="style.css">
 <style>
 /* ═══════════════ CSS VARS & THEMES ═══════════════ */
 :root{
@@ -396,7 +397,16 @@ body.perf-mode *{animation:none !important;transition:none !important;}
         <div class="auth-step-desc">Bridge your Roblox account for real-time data and analytics.</div>
       </div>
     </div>
-    <button class="btn-primary" id="auth-btn" onclick="handleAuthStep()" data-i18n-auth="connectGoogle">Connect with Google</button>
+    <button class="btn-primary" id="auth-btn" onclick="handleAuthStep()" data-i18n-auth="connectGoogle" style="display:none;">Connect with Google</button>
+    <!-- Branded connect buttons — shown/hidden per step -->
+    <button class="btn-google-branded" id="auth-btn-google" onclick="handleAuthStep()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.8 0 7 5.4 3.2 13.2l7.9 6.1C13.1 13 18.1 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17z"/><path fill="#FBBC05" d="M11.1 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.4 10.7l8.7-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.3l-8.1 6.2C6.8 43 14.8 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <button class="btn-roblox-branded" id="auth-btn-roblox" onclick="handleAuthStep()" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 50 50" fill="white"><path d="M10 3L3 40l37 7 7-37L10 3zm23.4 26.2l-10.2-1.9 1.9-10.2 10.2 1.9-1.9 10.2z"/></svg>
+      Connect Roblox Account
+    </button>
     <div class="auth-err" id="auth-err" style="display:none;"></div>
     <div class="auth-divider" data-i18n-auth="syncAccounts">Sync your accounts to unlock all features</div>
   </div>
@@ -939,17 +949,32 @@ function showAuthErr(msg){
 function hideAuthErr(){const el=document.getElementById('auth-err');el.innerHTML='';el.style.display='none';}
 
 // ── AUTH ─────────────────────────────────
+function _setBtnState(id,disabled,text){
+  const b=document.getElementById(id);if(!b)return;
+  b.disabled=disabled;
+  // Find the text node (may be after the SVG icon)
+  const textNode=[...b.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());
+  if(textNode){textNode.textContent=' '+text;}
+  else{
+    // Fallback: set a data-label span or last child text
+    let span=b.querySelector('.btn-label');
+    if(!span){span=document.createElement('span');span.className='btn-label';b.appendChild(span);}
+    span.textContent=text;
+  }
+}
 async function handleAuthStep(){
-  const btn=document.getElementById('auth-btn');hideAuthErr();
+  hideAuthErr();
   if(APP.authStep===0){
-    btn.disabled=true;btn.textContent='Opening Google popup...';
-    try{await doGoogleAuth();markStepDone('google');APP.authStep=1;btn.disabled=false;btn.textContent='Authorize Roblox Open Cloud';}
-    catch(e){btn.disabled=false;btn.textContent='Connect with Google';showAuthErr(e.message||'Google auth failed.');}
+    _setBtnState('auth-btn-google',true,'Opening Google…');
+    try{await doGoogleAuth();markStepDone('google');APP.authStep=1;
+      document.getElementById('auth-btn-google').style.display='none';
+      document.getElementById('auth-btn-roblox').style.display='flex';
+    }catch(e){_setBtnState('auth-btn-google',false,'Continue with Google');showAuthErr(e.message||'Google auth failed.');}
   } else if(APP.authStep===1){
-    btn.disabled=true;btn.textContent='Connecting to Roblox...';
+    _setBtnState('auth-btn-roblox',true,'Connecting to Roblox…');
     const stored=localStorage.getItem('pn_rbx_token');
-    if(stored){APP.rbxToken=stored;await fetchAndStoreUser();if(!APP.user?.userId){btn.disabled=false;btn.textContent='Link Roblox Account';showAuthErr('Could not retrieve your Roblox identity.');return;}markStepDone('roblox');beginLoading();}
-    else{try{await startRobloxAuth();await fetchAndStoreUser();if(!APP.user?.userId)throw new Error('Could not retrieve your Roblox identity.');markStepDone('roblox');beginLoading();}catch(e){btn.disabled=false;btn.textContent='Link Roblox Account';showAuthErr(e.message||'Roblox connection failed.');}}
+    if(stored){APP.rbxToken=stored;await fetchAndStoreUser();if(!APP.user?.userId){_setBtnState('auth-btn-roblox',false,'Connect Roblox Account');showAuthErr('Could not retrieve your Roblox identity.');return;}markStepDone('roblox');beginLoading();}
+    else{try{await startRobloxAuth();await fetchAndStoreUser();if(!APP.user?.userId)throw new Error('Could not retrieve your Roblox identity.');markStepDone('roblox');beginLoading();}catch(e){_setBtnState('auth-btn-roblox',false,'Connect Roblox Account');showAuthErr(e.message||'Roblox connection failed.');}}
   }
 }
 function markStepDone(which){
@@ -1630,32 +1655,157 @@ function runSecurityScan(){
 // ══════════════════════════════════════════
 //  RBLX VALUES
 // ══════════════════════════════════════════
-const POPULAR_LIMITEDS=[
-  {name:'Dominus Empyreus',id:21070012,value:'~140,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/21070012'},
-  {name:'Korblox Deathspeaker',id:19027209,value:'~20,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/19027209'},
-  {name:'Hallows Edge',id:119736750,value:'~8,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/119736750'},
-  {name:'Valkyrie Helm',id:1365767,value:'~2,800 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/1365767'},
-  {name:'Sparkle Time Fedora',id:108548,value:'~1,800 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/108548'},
-  {name:'Red Domino Crown',id:20573078,value:'~12,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/20573078'},
-  {name:'Icicle Crown of Frostbite',id:48545806,value:'~3,500 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/48545806'},
-  {name:'The Classic ROBLOX Fedora',id:11748356,value:'~900 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/11748356'},
+// ══════════════════════════════════════════
+//  POPULAR LIMITEDS — live prices from Rolimons
+//  4-week auto-refresh cache in localStorage
+// ══════════════════════════════════════════
+
+// Seed list: item IDs + emojis. Prices are fetched live.
+const POPULAR_LIMITED_SEEDS = [
+  {id:21070012,  name:'Dominus Empyreus',      emoji:'👑', creator:'Roblox'},
+  {id:1365767,   name:'Valkyrie Helm',          emoji:'⚔️', creator:'Roblox'},
+  {id:19027209,  name:'Korblox Deathspeaker',   emoji:'💀', creator:'Roblox'},
+  {id:20573078,  name:'Red Domino Crown',        emoji:'🔴', creator:'Roblox'},
+  {id:119736750, name:'Hallows Edge',            emoji:'🌙', creator:'Roblox'},
+  {id:48545806,  name:'Icicle Crown',            emoji:'❄️', creator:'Roblox'},
+  {id:108548,    name:'Sparkle Time Fedora',     emoji:'✨', creator:'Roblox'},
+  {id:11748356,  name:'Classic ROBLOX Fedora',   emoji:'🎩', creator:'Roblox'},
 ];
+
+// Cache key + 4-week TTL (28 days in ms)
+const LTD_CACHE_KEY = 'pn_popular_limiteds_v2';
+const LTD_CACHE_TTL = 28 * 24 * 60 * 60 * 1000;
+
+function _ltdLoadCache() {
+  try {
+    const raw = localStorage.getItem(LTD_CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c || !c.ts || !c.items || !c.items.length) return null;
+    if (Date.now() - c.ts > LTD_CACHE_TTL) return null; // expired
+    return c;
+  } catch (_) { return null; }
+}
+function _ltdSaveCache(items) {
+  try { localStorage.setItem(LTD_CACHE_KEY, JSON.stringify({ts: Date.now(), items})); } catch (_) {}
+}
+function _ltdNextRefresh(ts) {
+  if (!ts) return 'Unknown';
+  const d = new Date(ts + LTD_CACHE_TTL);
+  return d.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+}
+
+async function _ltdFetchLivePrices() {
+  // Fetch from Rolimons itemapi — has CORS headers, no proxy needed
+  const r = await fetch('https://www.rolimons.com/itemapi/itemdetails');
+  if (!r.ok) throw new Error('Rolimons API ' + r.status);
+  const d = await r.json();
+  const items = d.items || {};
+  return POPULAR_LIMITED_SEEDS.map(seed => {
+    const row = items[String(seed.id)];
+    // Rolimons row: [name, acronym, value, ?, demand, trend, projected, hyped, rare, ?, rap]
+    const roliValue = row ? (row[3] > 0 ? row[3] : null) : null;
+    const rap       = row ? (row[10] > 0 ? row[10] : null) : null;
+    const demand    = row ? row[4] : -1;
+    const trend     = row ? row[5] : -1;
+    return {
+      ...seed,
+      rap,
+      roliValue,
+      demand,
+      trend,
+      link: `https://www.roblox.com/catalog/${seed.id}`,
+    };
+  });
+}
+
 const DEMAND_LABELS={'-1':'None','0':'Terrible','1':'Low','2':'Normal','3':'High','4':'Amazing'};
-const DEMAND_COLORS={'-1':'#888','0':'#e74c3c','1':'#e67e22','2':'#f1c40f','3':'#2ecc71','4':'#9b59b6'};
+const DEMAND_COLORS={'-1':'#888','0':'#4aa3e0','1':'#7BBCE0','2':'#f1c40f','3':'#e67e22','4':'#e74c3c'};
+const DEMAND_ICONS_C={'-1':'—','0':'🧊','1':'🧊','2':'⚡','3':'🔥','4':'🔥🔥'};
 const TREND_LABELS={'-1':'None','0':'Lowering','1':'Unstable','2':'Stable','3':'Raising','4':'Fluctuating'};
 const TREND_ICONS={'-1':'—','0':'📉','1':'〰️','2':'➡️','3':'📈','4':'🔀'};
 
-function populatePopularLimiteds(){
-  document.getElementById('popular-limiteds').innerHTML=`
-    <table class="value-result-table">
-      <thead><tr><th>Name</th><th>Est. Value</th><th>Creator</th><th>Link</th></tr></thead>
-      <tbody>${POPULAR_LIMITEDS.map(i=>`<tr>
-        <td style="font-weight:600;">${i.name}</td>
-        <td style="color:var(--warning);font-family:var(--mono);font-weight:700;">${i.value}</td>
-        <td style="color:var(--text-secondary);">@${i.creator}</td>
-        <td><a class="value-link" href="${i.link}" target="_blank">Roblox ↗</a></td>
-      </tr>`).join('')}</tbody>
-    </table>`;
+function _ltdRenderTable(items, cacheTs) {
+  const sorted = [...items].sort((a,b)=>(b.roliValue||b.rap||0)-(a.roliValue||a.rap||0));
+  const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  const fmt = n => n == null ? '—' : n >= 1000 ? (n/1000).toFixed(n%1000===0?0:1)+'K' : n.toLocaleString();
+  const demandKey = d => String(d ?? -1);
+  const nextRefresh = _ltdNextRefresh(cacheTs);
+
+  const container = document.getElementById('popular-limiteds');
+  container.innerHTML = `
+    <div class="popular-limiteds-wrap">
+      <div class="ltd-meta-row">
+        <span class="ltd-meta-live">🔴 Live prices · Rolimons</span>
+        <span class="ltd-meta-refresh">🔄 Next update: ${nextRefresh}</span>
+      </div>
+      <table class="popular-limiteds-table">
+        <thead><tr>
+          <th>#</th><th>Item</th><th>RAP</th><th>Roli Value</th><th>Demand</th><th>Trend</th><th>Links</th>
+        </tr></thead>
+        <tbody>${sorted.map((i,idx)=>`<tr>
+          <td><span class="ltd-rank ${rankClass(idx)}">${idx+1}</span></td>
+          <td><div class="ltd-name-cell">
+            <div class="ltd-thumb" id="ltd-thumb-${i.id}"><span class="emoji-chip">${i.emoji}</span></div>
+            <div>
+              <div class="ltd-item-name" title="${i.name}">${i.name}</div>
+              <span class="ltd-rarity-badge">LIMITED</span>
+            </div>
+          </div></td>
+          <td><span class="ltd-value">${i.rap != null ? 'R$ '+fmt(i.rap) : '<span style="color:var(--text-muted);font-size:11px;">No RAP</span>'}</span></td>
+          <td><span class="ltd-roli-value">${i.roliValue != null ? 'R$ '+fmt(i.roliValue) : '<span style="color:var(--text-muted);font-size:11px;">Unvalued</span>'}</span></td>
+          <td><span class="emoji-chip" title="${DEMAND_LABELS[demandKey(i.demand)]||'Unknown'}" style="cursor:help;">${DEMAND_ICONS_C[demandKey(i.demand)]||'—'} <span style="font-size:10px;font-weight:600;">${DEMAND_LABELS[demandKey(i.demand)]||'—'}</span></span></td>
+          <td><span class="emoji-chip" title="${TREND_LABELS[String(i.trend??-1)]||'Unknown'}" style="cursor:help;">${TREND_ICONS[String(i.trend??-1)]||'—'}</span></td>
+          <td style="white-space:nowrap;">
+            <a class="value-link" href="${i.link}" target="_blank" style="margin-right:8px;">Catalog ↗</a>
+            <a class="value-link" href="https://www.rolimons.com/item/${i.id}" target="_blank" style="color:var(--success);">Rolimons ↗</a>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+
+  // Load real thumbnails async
+  sorted.forEach(i => {
+    fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${i.id}&size=150x150&format=Png`)
+      .then(r=>r.json()).then(d=>{
+        const url = d?.data?.[0]?.imageUrl; if(!url) return;
+        const el = document.getElementById(`ltd-thumb-${i.id}`);
+        if(el) el.innerHTML = `<img src="${url}" alt="${i.name}" loading="lazy">`;
+      }).catch(()=>{});
+  });
+}
+
+async function populatePopularLimiteds() {
+  const container = document.getElementById('popular-limiteds');
+  // Show skeleton while loading
+  container.innerHTML = `<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <div style="width:13px;height:13px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>
+    Loading live prices from Rolimons…
+  </div>`;
+
+  // Check cache first
+  const cached = _ltdLoadCache();
+  if (cached) {
+    _ltdRenderTable(cached.items, cached.ts);
+    return;
+  }
+
+  // Cache expired or missing — fetch live
+  try {
+    const items = await _ltdFetchLivePrices();
+    _ltdSaveCache(items);
+    _ltdRenderTable(items, Date.now());
+  } catch (err) {
+    // Fetch failed — show fallback with error note
+    console.warn('[popular limiteds] fetch failed:', err);
+    const fallback = POPULAR_LIMITED_SEEDS.map(s=>({...s, rap:null, roliValue:null, demand:-1, trend:-1, link:`https://www.roblox.com/catalog/${s.id}`}));
+    _ltdRenderTable(fallback, null);
+    container.insertAdjacentHTML('afterbegin',
+      `<div style="padding:8px 14px;background:rgba(240,160,32,0.08);border:1px solid rgba(240,160,32,0.25);border-radius:var(--radius);font-size:12px;color:var(--warning);margin-bottom:10px;">
+        ⚠ Could not reach Rolimons — showing items without live prices. <button onclick="localStorage.removeItem('${LTD_CACHE_KEY}');populatePopularLimiteds();" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;">Retry</button>
+      </div>`
+    );
+  }
 }
 
 async function hubCheckValue(){
@@ -1685,7 +1835,8 @@ async function getRolimonsItems(){
 }
 
 const DEMAND_LABELS_C={'-1':'None','0':'Terrible','1':'Low','2':'Normal','3':'High','4':'Amazing'};
-const DEMAND_COLORS_C={'-1':'#888','0':'#e74c3c','1':'#e67e22','2':'#f1c40f','3':'#2ecc71','4':'#9b59b6'};
+const DEMAND_COLORS_C={'-1':'#888','0':'#4aa3e0','1':'#7BBCE0','2':'#f1c40f','3':'#e67e22','4':'#e74c3c'};
+const DEMAND_ICONS_MAP={'-1':'—','0':'🧊','1':'🧊','2':'⚡','3':'🔥','4':'🔥🔥'};
 const TREND_LABELS_C={'-1':'None','0':'Lowering','1':'Unstable','2':'Stable','3':'Raising','4':'Fluctuating'};
 const TREND_ICONS_C={'-1':'—','0':'📉','1':'〰️','2':'➡️','3':'📈','4':'🔀'};
 
@@ -1734,22 +1885,31 @@ async function searchItemValue(query,el,category='2',subcategory=''){
     const allIds=merged.map(m=>m.itemId).filter(Boolean);
     let thumbMap={};
     try{
-      const ids=allIds.slice(0,30).join(',');
-      const tRes=await fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${ids}&size=110x110&format=Png`);
-      if(tRes.ok){const tData=await tRes.json();(tData.data||[]).forEach(t=>{if(t.state==='Completed')thumbMap[t.targetId]=t.imageUrl;});}
-    }catch(_){}
+    // FIX #1+5: Route through /api/proxy to avoid CORS; thumbnails now 420x420
+    const ids=allIds.slice(0,30).join(',');
+    try{
+      const tRes=await fetch(`/api/proxy?action=thumbnail&type=asset&ids=${ids}`);
+      if(tRes.ok){const tData=await tRes.json();thumbMap=tData.data||{};}
+    }catch(_){
+      // Final fallback: direct call (may be blocked by CORS on some browsers)
+      try{
+        const tRes=await fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${ids}&size=420x420&format=Png`);
+        if(tRes.ok){const tData=await tRes.json();(tData.data||[]).forEach(t=>{if(t.state==='Completed')thumbMap[t.targetId]=t.imageUrl;});}
+      }catch(_){}
+    }
 
     // 5. Sort: limiteds with RAP first
     const results=merged.slice(0,12).map(({itemId,roliData,catalogItem})=>{
       const[rName,acronym,rap,value,defaultVal,demand,trend,projected]=roliData||[];
       const name=catalogItem?.name||rName||'Unknown';
       const catalogPrice=catalogItem?.price??catalogItem?.lowestPrice??null;
+      // FIX #3: Use Rolimons Value > DefaultValue > RAP as displayValue (not original catalog price)
       const displayValue=(value&&value>0)?value:(defaultVal&&defaultVal>0?defaultVal:(rap&&rap>0?rap:null));
       const isLimited=catalogItem?.itemRestrictions?.some(r=>r==='Limited'||r==='LimitedUnique')||(roliData&&rap>0)||false;
-      // Get creator — prefer catalogItem creator, not hardcoded
       const creator=catalogItem?.creatorName||catalogItem?.creator?.name||null;
       return{id:itemId,name,acronym:acronym||null,rap:rap>0?rap:null,value:value>0?value:null,displayValue,catalogPrice,isLimited,isProjected:projected===1,
-        demand:demand!==undefined?{label:DEMAND_LABELS_C[String(demand)]||'Unknown',color:DEMAND_COLORS_C[String(demand)]||'#888'}:null,
+        // FIX #4: Include icon in demand/trend for full index display
+        demand:demand!==undefined?{label:DEMAND_LABELS_C[String(demand)]||'Unknown',icon:DEMAND_ICONS_MAP[String(demand)]||'—',color:DEMAND_COLORS_C[String(demand)]||'#888'}:null,
         trend:trend!==undefined?{label:TREND_LABELS_C[String(trend)]||'Unknown',icon:TREND_ICONS_C[String(trend)]||'—'}:null,
         thumbnailUrl:thumbMap[itemId]||null,creator,assetType:catalogItem?.assetType||null,
         robloxUrl:`https://www.roblox.com/catalog/${itemId}`,roliUrl:`https://www.rolimons.com/item/${itemId}`
@@ -1763,7 +1923,9 @@ async function searchItemValue(query,el,category='2',subcategory=''){
       const val=i.displayValue?'R$ '+i.displayValue.toLocaleString():null;
       const catPrice=i.catalogPrice!=null?'R$ '+i.catalogPrice.toLocaleString():null;
       return`<div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);animation:fadeIn .3s ${idx*0.06}s ease both;opacity:0;animation-fill-mode:both;">
-        <div style="flex-shrink:0;width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--accent-dim);">${i.thumbnailUrl?`<img src="${i.thumbnailUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${i.name}">`:'<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;">📦</span>'}</div>
+        <div style="flex-shrink:0;width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;">${i.thumbnailUrl
+          ? `<img src="${i.thumbnailUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${i.name}" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=28 height=28 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><rect x=2 y=2 width=20 height=20 rx=3/><path d=M2 8h20/><path d=M8 2v6/><path d=M16 2v6/></svg>';">`
+          : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M2 8h20"/><path d="M8 2v6"/><path d="M16 2v6"/></svg>`}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
             <a class="value-link" href="${i.robloxUrl}" target="_blank" style="font-size:13px;font-weight:700;">${i.name}</a>
@@ -1772,14 +1934,15 @@ async function searchItemValue(query,el,category='2',subcategory=''){
             ${i.isProjected?'<span style="font-size:10px;color:var(--danger);background:rgba(240,64,64,.1);padding:1px 6px;border-radius:4px;font-weight:700;">⚠ PROJECTED</span>':''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:6px;">
-            ${rap?`<span>RAP: <strong style="color:var(--text-primary);">${rap}</strong></span>`:''}
-            ${val&&val!==rap?`<span>Value: <strong style="color:var(--success);">${val}</strong></span>`:''}
-            ${catPrice?`<span>Price: <strong style="color:${i.isLimited?'var(--warning)':'var(--text-primary)'};">${catPrice}</strong></span>`:''}
+            ${rap?`<span>💰 RAP: <strong style="color:var(--text-primary);">${rap}</strong></span>`:''}
+            ${val&&val!==rap?`<span>💎 Value: <strong style="color:var(--success);">${val}</strong></span>`:''}
+            ${catPrice&&!i.isLimited?`<span>🏷️ Price: <strong style="color:var(--text-primary);">${catPrice}</strong></span>`:''}
             ${!rap&&!val&&!catPrice?`<span style="color:var(--text-muted);">Off-sale / No value data</span>`:''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;">
-            ${i.demand?`<span>Demand: <strong style="color:${i.demand.color};">${i.demand.label}</strong></span>`:''}
+            ${i.demand?`<span>Demand: <strong style="color:${i.demand.color};">${i.demand.icon} ${i.demand.label}</strong></span>`:''}
             ${i.trend?`<span>Trend: <strong>${i.trend.icon} ${i.trend.label}</strong></span>`:''}
+            ${i.rap?`<span>💰 RAP: <strong>${'R$ '+i.rap.toLocaleString()}</strong></span>`:''}
             ${i.creator?`<span style="color:var(--text-muted);">by @${i.creator}</span>`:''}
           </div>
           <div style="margin-top:6px;display:flex;gap:8px;">
@@ -1818,7 +1981,7 @@ async function loadProfileAdvanced(){
     </div>`;
     const social=socialR.status==='fulfilled'?socialR.value:{};
     const links=social.socialLinks||social.data||[];
-    els.social.innerHTML=links.length?links.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:16px;">${l.type==='Twitter'?'🐦':l.type==='YouTube'?'▶️':l.type==='Twitch'?'💜':l.type==='Discord'?'🎮':'🔗'}</span><div><div style="font-size:12px;font-weight:600;">${l.type||'Link'}</div><a href="${l.url}" target="_blank" style="font-size:11px;color:var(--accent);">${l.url}</a></div></div>`).join(''):'<div style="color:var(--text-muted);font-size:12px;">No social links set.</div>';
+    els.social.innerHTML=links.length?links.map(l=>{const icon=l.type==='Twitter'?'🐦':l.type==='YouTube'?'▶️':l.type==='Twitch'?'💜':l.type==='Discord'?'🎮':'🔗';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);"><div class="social-icon-wrap">${icon}</div><div><div style="font-size:12px;font-weight:600;">${l.type||'Link'}</div><a href="${l.url}" target="_blank" style="font-size:11px;color:var(--accent);">${l.url}</a></div></div>`;}).join(''):'<div style="color:var(--text-muted);font-size:12px;">No social links set.</div>';
     const info=infoR.status==='fulfilled'?infoR.value:{};
     els.full.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
       ${[['User ID',info.id||APP.user.userId],['Username',info.name||APP.user.username],['Display Name',info.displayName||'—'],['Created',info.created?new Date(info.created).toLocaleDateString():'—'],['Bio',info.description||'No bio set']].map(([k,v])=>`<div style="background:var(--bg-elevated);padding:8px;border-radius:var(--radius);border:1px solid var(--border);"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">${k}</div><div style="color:var(--text-primary);font-weight:500;word-break:break-word;">${v}</div></div>`).join('')}
@@ -1922,7 +2085,7 @@ function signOut(){
     showScreen('auth');APP.authStep=0;
     document.getElementById('step-google').className='auth-step active';document.getElementById('step1-num').textContent='1';
     document.getElementById('step-roblox').className='auth-step';document.getElementById('step2-num').textContent='2';
-    const btn=document.getElementById('auth-btn');btn.disabled=false;btn.textContent='Connect with Google';
+    document.getElementById('auth-btn-google').style.display='flex';document.getElementById('auth-btn-google').disabled=false;document.getElementById('auth-btn-roblox').style.display='none';document.getElementById('auth-btn-roblox').disabled=false;
     hideAuthErr();
   },1000);
 }
@@ -1937,16 +2100,16 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 
 // Fixed symbol map per service key — never random
 const PULSE_SERVICE_META = {
-  website:    { name: 'Website',        icon: '◉' },
-  gameclient: { name: 'Game Client',    icon: '▶' },
-  auth:       { name: 'Authentication', icon: '⬡' },
-  launch:     { name: 'Game Launch',    icon: '◈' },
-  avatar:     { name: 'Avatar',         icon: '◎' },
-  catalog:    { name: 'Catalog',        icon: '▣' },
-  chat:       { name: 'Chat',           icon: '◇' },
-  economy:    { name: 'Economy',        icon: '◆' },
-  groups:     { name: 'Groups',         icon: '◫' },
-  notifs:     { name: 'Notifications',  icon: '◬' },
+  website:    { name: 'Website',        icon: '🌐' },
+  gameclient: { name: 'Game Client',    icon: '🎮' },
+  auth:       { name: 'Authentication', icon: '🔐' },
+  launch:     { name: 'Game Launch',    icon: '🚀' },
+  avatar:     { name: 'Avatar',         icon: '👤' },
+  catalog:    { name: 'Catalog',        icon: '🛍️' },
+  chat:       { name: 'Chat',           icon: '💬' },
+  economy:    { name: 'Economy',        icon: '💰' },
+  groups:     { name: 'Groups',         icon: '👥' },
+  notifs:     { name: 'Notifications',  icon: '🔔' },
 };
 
 let _pulseData = null;
@@ -2079,7 +2242,8 @@ function renderPulseTopGames(games) {
 
   el.innerHTML = games.slice(0, 5).map((g, i) => {
     const placeId = g.placeId || g.rootPlaceId || 0;
-    const playing = g.playerCount || 0;
+    // FIX #2: .playing is the correct field from Roblox games API, default to 0 (not dash)
+    const playing = g.playing || g.playerCount || 0;
     const visits = g.visits || 0;
     const name = g.name || 'Unknown';
     const creator = g.creatorName || '';
