@@ -859,8 +859,9 @@ function hideAuthErr(){const el=document.getElementById('auth-err');el.innerHTML
 // ── AUTH ─────────────────────────────────
 async function handleAuthStep(){
   const btn=document.getElementById('auth-btn');hideAuthErr();
+  console.log('[auth] step=',APP.authStep,'google=',typeof google);
   if(APP.authStep===0){
-    btn.disabled=true;btn.textContent='Connecting to Google...';
+    btn.disabled=true;btn.textContent='Opening Google popup...';
     try{await doGoogleAuth();markStepDone('google');APP.authStep=1;btn.disabled=false;btn.textContent='Authorize Roblox Open Cloud';}
     catch(e){btn.disabled=false;btn.textContent='Connect with Google';showAuthErr(e.message||'Google auth failed.');}
   } else if(APP.authStep===1){
@@ -876,11 +877,31 @@ function markStepDone(which){
 }
 function doGoogleAuth(){
   return new Promise((resolve,reject)=>{
-    if(typeof google==='undefined'){let w=0;const iv=setInterval(()=>{w+=200;if(typeof google!=='undefined'){clearInterval(iv);doGoogleAuth().then(resolve).catch(reject);}if(w>5000){clearInterval(iv);reject(new Error('Google Identity Services failed to load.'));}},200);return;}
-    const client=google.accounts.oauth2.initTokenClient({client_id:CFG.GOOGLE_CLIENT_ID,scope:'openid profile email',
-      callback:(res)=>{if(res.error){reject(new Error(res.error_description||res.error));return;}localStorage.setItem('pn_google_token',res.access_token);resolve(res.access_token);},
-      error_callback:(e)=>{const m={popup_closed:'Identity sync interrupted.',access_denied:'Auth Error.'};reject(new Error(m[e.type]||e.type||'Connection interrupted.'));}});
-    client.requestAccessToken({prompt:'consent'});
+    if(typeof google==='undefined'||typeof google.accounts==='undefined'){
+      let w=0;const iv=setInterval(()=>{w+=200;
+        if(typeof google!=='undefined'&&typeof google.accounts!=='undefined'){clearInterval(iv);doGoogleAuth().then(resolve).catch(reject);}
+        if(w>6000){clearInterval(iv);reject(new Error('Google Identity Services failed to load. Check your internet connection or disable any ad blockers.'));}
+      },200);return;
+    }
+    try{
+      const client=google.accounts.oauth2.initTokenClient({client_id:CFG.GOOGLE_CLIENT_ID,scope:'openid profile email',
+        callback:(res)=>{
+          console.log('[google auth callback]',res);
+          if(res.error){reject(new Error(res.error_description||res.error));return;}
+          localStorage.setItem('pn_google_token',res.access_token);resolve(res.access_token);
+        },
+        error_callback:(e)=>{
+          console.error('[google auth error]',e);
+          const m={popup_closed:'Popup was closed. Please try again and keep it open.',access_denied:'Access denied. Make sure your Google account is authorized.'};
+          reject(new Error(m[e.type]||e.type||'Connection interrupted.'));
+        }
+      });
+      console.log('[google auth] requesting token...');
+      client.requestAccessToken({prompt:'consent'});
+    }catch(err){
+      console.error('[google auth init error]',err);
+      reject(new Error('Google auth init failed: '+err.message));
+    }
   });
 }
 function randStr(n){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';const a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,b=>c[b%c.length]).join('');}
@@ -1747,4 +1768,4 @@ function setLanguage(){}
 function applyLanguage(){}
 </script>
 </body>
-</html>
+</html> 
