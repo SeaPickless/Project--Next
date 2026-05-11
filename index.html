@@ -560,7 +560,7 @@ body.perf-mode *{animation:none !important;transition:none !important;}
     <div class="hub-panel active" id="hub-social">
       <div class="hub-header">
         <div class="hub-title" data-i18n="hub1">Social Commander</div>
-        <div class="hub-sub">Roblox profile intelligence · User lookup · Friend Radar · Account analytics</div>
+        <div class="hub-sub">Roblox profile intelligence · User lookup · Profile Compare · Account analytics</div>
       </div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title"><div class="card-title-dot"></div>User Lookup</div>
@@ -577,26 +577,6 @@ body.perf-mode *{animation:none !important;transition:none !important;}
         <div class="stat-card"><div class="stat-label">Followers</div><div class="stat-val" style="color:var(--success)" id="social-stat-followers">—</div><div class="stat-sub">Total</div></div>
         <div class="stat-card"><div class="stat-label">Following</div><div class="stat-val" id="social-stat-following">—</div><div class="stat-sub">Total</div></div>
         <div class="stat-card"><div class="stat-label">Account Age</div><div class="stat-val" style="color:var(--warning);font-size:18px;" id="social-stat-age">—</div><div class="stat-sub">Years</div></div>
-      </div>
-      <!-- ═══ SOCIAL INTELLIGENCE — replaces Connections Finder ═══ -->
-      <div class="card" style="margin-top:16px;">
-        <div class="card-title"><div class="card-title-dot"></div>Friend Radar
-          <span class="api-chip live">● Live</span>
-        </div>
-        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">Scan any user's social network — mutual friends, hop distance, and real-time presence.</p>
-        <div class="search-box">
-          <input class="search-input" id="radar-input" placeholder="Enter username to radar scan..." type="text" onkeydown="if(event.key==='Enter')runFriendRadar()">
-          <button class="btn-accent" onclick="runFriendRadar()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="11" stroke-dasharray="2 4"/></svg>Scan
-          </button>
-        </div>
-        <div id="radar-progress" style="display:none;margin-bottom:12px;">
-          <div class="progress-wrap" style="margin-bottom:0;">
-            <div class="progress-header"><div class="progress-label" id="radar-label">Scanning network...</div><div class="progress-meta" id="radar-pct">0%</div></div>
-            <div class="progress-bar"><div class="progress-fill" id="radar-bar" style="width:0%"></div></div>
-          </div>
-        </div>
-        <div id="radar-result"></div>
       </div>
       <!-- ═══ PROFILE COMPARE ═══ -->
       <div class="card" style="margin-top:16px;">
@@ -812,7 +792,7 @@ body.perf-mode *{animation:none !important;transition:none !important;}
       </div>
       <!-- Banner -->
       <div style="background:linear-gradient(135deg,var(--accent-dim),rgba(32,160,240,0.08));border:1px solid var(--border-accent);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;">
-        <div style="font-size:32px;">🚀</div>
+        <div style="font-size:32px;">◈</div>
         <div>
           <div style="font-size:15px;font-weight:800;margin-bottom:4px;">Social Commander · Genesis Phase</div>
           <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">These features are in active development. They will be fully integrated into Project Next in an upcoming release. Preview them here.</div>
@@ -822,24 +802,24 @@ body.perf-mode *{animation:none !important;transition:none !important;}
       <div class="grid-2" style="margin-bottom:16px;">
 
         <!-- Friend Radar -->
-        <div class="card" style="border-color:rgba(34,208,106,0.2);position:relative;overflow:hidden;">
-          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--success);color:#000;padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">BETA</div>
-          <div style="font-size:28px;margin-bottom:12px;">📡</div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Friend Radar</div>
+        <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">COMING SOON</div>
+          <div style="font-size:28px;margin-bottom:12px;">◈</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Friends Radar</div>
           <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">Scan any Roblox user's social network in real time. Discover mutual friends, hop distance, and live presence status. BFS-based connection mapping gives you a full social graph at a glance.</div>
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--success);">✓</span> Mutual friend detection</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--success);">✓</span> Hop distance (1–3+) via BFS</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--success);">✓</span> Real-time presence status</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--success);">✓</span> Friend count &amp; follower stats</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);"><span style="color:var(--text-muted);">◎</span> Full network graph visualization (upcoming)</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Mutual friend detection</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Hop distance (1–3+) via BFS</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Real-time presence status</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Friend count &amp; follower stats</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);"><span style="color:var(--text-muted);">◎</span> Full network graph visualization</div>
           </div>
-          <div style="font-size:11px;color:var(--success);font-weight:600;background:rgba(34,208,106,0.08);border:1px solid rgba(34,208,106,0.2);border-radius:6px;padding:6px 10px;">✦ Already live in Social Commander</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">◈ In development — Genesis Phase v2</div>
         </div>
 
         <!-- Asset & Collection Manager -->
         <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
-          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">DEV</div>
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">COMING SOON</div>
           <div style="font-size:28px;margin-bottom:12px;">🗂️</div>
           <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Asset &amp; Collection Manager</div>
           <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">A full-featured Roblox asset manager. Browse, organize, and track your entire inventory — hats, accessories, gear, clothing, bundles — with smart filtering, custom collections, and value tagging.</div>
@@ -870,7 +850,7 @@ body.perf-mode *{animation:none !important;transition:none !important;}
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
             <div style="width:32px;height:32px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;box-shadow:0 0 12px rgba(34,208,106,.4);">✓</div>
-            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Social Commander + Friend Radar</div><div style="font-size:12px;color:var(--success);">Live — Genesis Phase v1</div></div>
+            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Social Commander + Profile Compare</div><div style="font-size:12px;color:var(--success);">Live — Genesis Phase v1</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
@@ -1111,18 +1091,18 @@ async function lookupUser(){
       fetch(`/api/proxy?action=userInfo&userId=${uid}`,{headers}).then(r=>r.json()),
       fetch(`/api/proxy?action=count&userId=${uid}`,{headers}).then(r=>r.json()),
       fetch(`/api/proxy?action=presence&userIds=${uid}`,{headers}).then(r=>r.json()),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=180x180&format=Png&isCircular=true`).then(r=>r.json()).catch(()=>({data:[]})),
+      fetch(`/api/proxy?action=thumbnail&type=avatar&ids=${uid}`).then(r=>r.json()).catch(()=>({data:{}})),
     ]);
     const prof=profR.status==='fulfilled'?profR.value:{};
     const counts=countR.status==='fulfilled'?countR.value:{};
     const pres=presR.status==='fulfilled'?(presR.value.data||[])[0]:null;
-    const avatarUrl=(thumbR.status==='fulfilled'?(thumbR.value.data||[])[0]?.imageUrl:'')||'';
+    const avatarUrl=(thumbR.status==='fulfilled'?(thumbR.value.data||{})[uid]:'')||prof.thumbnailUrl||'';
 
     const created=prof.created?new Date(prof.created):null;
     const ageYears=created?((Date.now()-created)/(1000*60*60*24*365.25)).toFixed(1):'?';
     const joinDate=created?created.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'?';
     const ptype=pres?.userPresenceType||0;
-    const presLabel=ptype===2?`🎮 In-Game${pres.lastLocation?' · '+pres.lastLocation:''}`:ptype===3?'🖥️ Studio':ptype===1?'🟢 Online':'⚫ Offline';
+    const presLabel=ptype===2?`▶ In-Game${pres.lastLocation?' · '+pres.lastLocation:''}`:ptype===3?'◈ In Studio':ptype===1?'● Online':'○ Offline';
     const presColor=ptype===2?'var(--info)':ptype===3?'var(--warning)':ptype===1?'var(--success)':'var(--text-muted)';
     const isBanned=prof.isBanned;
     const displayName=prof.displayName||prof.name||username;
@@ -1131,7 +1111,7 @@ async function lookupUser(){
     el.innerHTML=`
       <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);animation:fadeIn .3s ease both;">
         <div id="lookup-avatar-wrap" style="flex-shrink:0;width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--accent-dim);border:2px solid var(--border-accent);display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:28px;font-weight:700;color:var(--accent);">${displayName[0].toUpperCase()}</span>
+          ${avatarUrl?`<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${displayName}" onerror="this.parentElement.innerHTML='<span style=font-size:28px;font-weight:700;color:var(--accent)>${displayName[0].toUpperCase()}</span>'">`:`<span style="font-size:28px;font-weight:700;color:var(--accent);">${displayName[0].toUpperCase()}</span>`}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
@@ -1148,13 +1128,6 @@ async function lookupUser(){
           </div>
         </div>
       </div>`;
-    // Load headshot after render
-    (async()=>{
-      try{
-        const tRes=await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=180x180&format=Png&isCircular=true`);
-        if(tRes.ok){const tData=await tRes.json();const url=(tData.data||[])[0]?.imageUrl;if(url){const wrap=document.getElementById('lookup-avatar-wrap');if(wrap){wrap.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="${displayName}" onerror="this.parentElement.innerHTML='<span style=font-size:28px;font-weight:700;color:var(--accent)>${displayName[0].toUpperCase()}</span>'">`;}}}
-      }catch(_){}
-    })();
     document.getElementById('social-stat-grid').style.display='';
     document.getElementById('social-stat-friends').textContent=(counts.friends||0).toLocaleString();
     document.getElementById('social-stat-followers').textContent=(counts.followers||0).toLocaleString();
@@ -1280,10 +1253,11 @@ async function runProfileCompare(){
       fetch(`/api/proxy?action=userInfo&userId=${uB.id}`).then(r=>r.json()).catch(()=>({})),
       fetch(`/api/proxy?action=count&userId=${uA.id}`).then(r=>r.json()).catch(()=>({})),
       fetch(`/api/proxy?action=count&userId=${uB.id}`).then(r=>r.json()).catch(()=>({})),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uA.id}&size=110x110&format=Png`).then(r=>r.json()).catch(()=>({data:[]})),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uB.id}&size=110x110&format=Png`).then(r=>r.json()).catch(()=>({data:[]})),
+      fetch(`/api/proxy?action=thumbnail&type=avatar&ids=${uA.id}`).then(r=>r.json()).catch(()=>({data:{}})),
+      fetch(`/api/proxy?action=thumbnail&type=avatar&ids=${uB.id}`).then(r=>r.json()).catch(()=>({data:{}})),
     ]);
-    const tA=(thumbA.data||[])[0]?.imageUrl||'';const tB=(thumbB.data||[])[0]?.imageUrl||'';
+    const tA=thumbA.data?.[uA.id]||infoA.thumbnailUrl||'';
+    const tB=thumbB.data?.[uB.id]||infoB.thumbnailUrl||'';
     const ageA=infoA.created?((Date.now()-new Date(infoA.created))/(1000*60*60*24*365.25)).toFixed(1):'?';
     const ageB=infoB.created?((Date.now()-new Date(infoB.created))/(1000*60*60*24*365.25)).toFixed(1):'?';
     function avatar(url,name){
@@ -1321,7 +1295,7 @@ async function openFriendModal(friend){
   const uname=friend.name||friend.displayName||'?';
   const ptype=friend.userPresenceType||0;
   const gameName=friend.gameName||friend.lastLocation||'';
-  const status=ptype===2?`🎮 In Game${gameName?' · '+gameName.slice(0,28):''}`:ptype===3?'🟡 In Studio':ptype===1?'🟢 Online':'⚫ Offline';
+  const status=ptype===2?`▶ In Game${gameName?' · '+gameName.slice(0,28):''}`:ptype===3?'◈ In Studio':ptype===1?'● Online':'○ Offline';
   const statusColor=ptype===2?'var(--info)':ptype>=1?'var(--success)':'var(--text-muted)';
   document.getElementById('modal-display').textContent=display;
   document.getElementById('modal-username').textContent='@'+uname;
@@ -1400,7 +1374,7 @@ async function openAllFriends(){
   el.innerHTML=APP.friends.map(f=>{
     const uid=f.id||f.userId;const display=f.displayName||f.name||'?';const uname=f.name||'?';
     const status=f.isOnline?(f.userPresenceType===2?'ingame':'online'):'offline';
-    const statusTxt=status==='ingame'?'🎮 In Game':status==='online'?'● Online':'○ Offline';
+    const statusTxt=status==='ingame'?'▶ In Game':status==='online'?'● Online':'○ Offline';
     const thumb=f.thumbnailUrl;
     return`<div class="friend-item"><div class="friend-avatar" style="background:var(--accent-dim);">${thumb?`<img src="${thumb}" alt="${display}" onerror="this.parentElement.innerHTML='<span style=color:var(--accent);font-weight:700>${display[0].toUpperCase()}</span>';">`:`<span style="color:var(--accent);font-weight:700;">${display[0].toUpperCase()}</span>`}<span class="presence-dot ${status}"></span></div><div class="friend-info"><div class="friend-name">${display}</div><div class="friend-display">@${uname}</div><div class="friend-status ${status}">${statusTxt}</div></div><div class="friend-actions"><button class="btn-sm" onclick="openFriendModal(${JSON.stringify(f).replace(/"/g,'&quot;')})">View</button></div></div>`;
   }).join('');
@@ -1477,23 +1451,23 @@ function renderInventory(items,rapItems){
 //  ULTIMATE DISCOVERY
 // ══════════════════════════════════════════
 const DISCOVERY_CATEGORIES=[
-  {label:'🔥 Most Visited / Played',sortOrder:2},
-  {label:'👫 Fun with Friends',sortOrder:6},
-  {label:'📈 Top Trending',sortOrder:3},
-  {label:'⭐ Top Rated',sortOrder:4},
-  {label:'🔁 Top Revisited',sortOrder:7},
-  {label:'🎭 Top Entertaining',sortOrder:8},
-  {label:'🎮 Roleplay & Avatar Sim',sortOrder:5,genreFilter:'Social'},
-  {label:'🏗️ Simulation',sortOrder:2,genreFilter:'Simulation'},
-  {label:'⚔️ Action & Fighting',sortOrder:2,genreFilter:'Fighting'},
-  {label:'🔫 Shooter',sortOrder:2,genreFilter:'Shooter'},
-  {label:'😱 Horror & Survival',sortOrder:2,genreFilter:'Horror'},
-  {label:'🏃 Obby & Platformer',sortOrder:2,genreFilter:'Obstacle'},
-  {label:'🗡️ RPG',sortOrder:2,genreFilter:'RPG'},
-  {label:'🎉 Party & Casual',sortOrder:2,genreFilter:'Comedy'},
-  {label:'💰 Tycoon & Idle',sortOrder:2,genreFilter:'Tycoon'},
-  {label:'🏎️ Sports & Racing',sortOrder:2,genreFilter:'Sports'},
-  {label:'🚀 Up-and-Coming',sortOrder:1},
+  {label:'▶ Most Visited / Played',sortOrder:2},
+  {label:'◈ Fun with Friends',sortOrder:6},
+  {label:'◉ Top Trending',sortOrder:3},
+  {label:'◆ Top Rated',sortOrder:4},
+  {label:'◎ Top Revisited',sortOrder:7},
+  {label:'▣ Top Entertaining',sortOrder:8},
+  {label:'◫ Roleplay & Avatar Sim',sortOrder:5,genreFilter:'Social'},
+  {label:'⬡ Simulation',sortOrder:2,genreFilter:'Simulation'},
+  {label:'◇ Action & Fighting',sortOrder:2,genreFilter:'Fighting'},
+  {label:'▷ Shooter',sortOrder:2,genreFilter:'Shooter'},
+  {label:'◬ Horror & Survival',sortOrder:2,genreFilter:'Horror'},
+  {label:'◍ Obby & Platformer',sortOrder:2,genreFilter:'Obstacle'},
+  {label:'⟡ RPG',sortOrder:2,genreFilter:'RPG'},
+  {label:'◌ Party & Casual',sortOrder:2,genreFilter:'Comedy'},
+  {label:'▤ Tycoon & Idle',sortOrder:2,genreFilter:'Tycoon'},
+  {label:'◐ Sports & Racing',sortOrder:2,genreFilter:'Sports'},
+  {label:'⟳ Up-and-Coming',sortOrder:1},
 ];
 
 function getGameThumb(placeId){return `https://www.roblox.com/asset-thumbnail/image?assetId=${placeId}&width=768&height=432&format=png`;}
@@ -1856,15 +1830,15 @@ async function loadProfileAdvanced(){
 //  SETTINGS
 // ══════════════════════════════════════════
 const SETTINGS_TOGGLES=[
-  {icon:'✨',name:'UI Animations',desc:'Fade-in, slide, card-appear transitions',key:'animations',on:true},
-  {icon:'💠',name:'Blur / Frosted Glass',desc:'Backdrop blur on panels (GPU intensive)',key:'blur',on:true},
-  {icon:'🌟',name:'Glow & Neon Effects',desc:'Accent glow on buttons and active items',key:'glow',on:true},
-  {icon:'🔄',name:'Loading Animations',desc:'Spinner and progress bar animations',key:'loadAnims',on:true},
-  {icon:'🖱️',name:'Hover Transforms',desc:'Scale and translate on card hover',key:'hoverFx',on:true},
-  {icon:'🔔',name:'Desktop Notifications',desc:'Browser alerts for friend activity',key:'notifs',on:true},
-  {icon:'🔒',name:'Zero-Trust Purge',desc:'Wipe all tokens on disconnect',key:'purge',on:true},
-  {icon:'⚡',name:'Async Concurrency',desc:'Parallel API fetches for faster loads',key:'async',on:true},
-  {icon:'📡',name:'Auto-Refresh Friends',desc:'Re-fetch friend list on tab focus',key:'autoRefresh',on:false},
+  {icon:'◈',name:'UI Animations',desc:'Fade-in, slide, card-appear transitions',key:'animations',on:true},
+  {icon:'◎',name:'Blur / Frosted Glass',desc:'Backdrop blur on panels (GPU intensive)',key:'blur',on:true},
+  {icon:'◉',name:'Glow & Neon Effects',desc:'Accent glow on buttons and active items',key:'glow',on:true},
+  {icon:'⟳',name:'Loading Animations',desc:'Spinner and progress bar animations',key:'loadAnims',on:true},
+  {icon:'◇',name:'Hover Transforms',desc:'Scale and translate on card hover',key:'hoverFx',on:true},
+  {icon:'◬',name:'Desktop Notifications',desc:'Browser alerts for friend activity',key:'notifs',on:true},
+  {icon:'⬡',name:'Zero-Trust Purge',desc:'Wipe all tokens on disconnect',key:'purge',on:true},
+  {icon:'▶',name:'Async Concurrency',desc:'Parallel API fetches for faster loads',key:'async',on:true},
+  {icon:'◆',name:'Auto-Refresh Friends',desc:'Re-fetch friend list on tab focus',key:'autoRefresh',on:false},
 ];
 
 function populateSettingsToggles(){
@@ -1958,115 +1932,207 @@ let _toastTimer;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
 
 // ══════════════════════════════════════════
-//  RBLX PULSE
+//  RBLX PULSE — real data from proxy
 // ══════════════════════════════════════════
-const PULSE_SERVICES=[
-  {name:'Website',icon:'🌐',key:'website'},
-  {name:'Game Client',icon:'🎮',key:'gameclient'},
-  {name:'Authentication',icon:'🔐',key:'auth'},
-  {name:'Game Launch',icon:'🚀',key:'launch'},
-  {name:'Avatar',icon:'👤',key:'avatar'},
-  {name:'Catalog',icon:'🛍️',key:'catalog'},
-  {name:'Chat',icon:'💬',key:'chat'},
-  {name:'Economy',icon:'💰',key:'economy'},
-  {name:'Groups',icon:'👥',key:'groups'},
-  {name:'Notifications',icon:'🔔',key:'notifs'},
-];
 
-async function populatePulse(){
-  // Services — attempt a lightweight ping to Roblox endpoints via proxy
-  renderPulseServices('loading');
-  renderPulseTopGames();
-  renderPulseActivity();
-  // Try fetching real data
-  try{
-    const r=await fetch('/api/proxy?action=discoverGames&sortOrder=2');
-    if(r.ok){
-      const d=await r.json();const games=d.data||[];
-      renderPulseServices('operational');
-      if(games.length){
-        const top=games[0];
-        document.getElementById('pulse-topgame-playing').textContent=formatPlaying(top.playerCount||top.playing||0);
-        document.getElementById('pulse-topgame-name').textContent=(top.name||'Unknown').slice(0,22);
-        document.getElementById('pulse-players').textContent=(games.reduce((s,g)=>s+(g.playerCount||g.playing||0),0)).toLocaleString()+'+';
-      }
-      renderPulseTopGames(games);
-    }else{renderPulseServices('degraded');}
-  }catch(_){renderPulseServices('degraded');}
+// Fixed symbol map per service key — never random
+const PULSE_SERVICE_META = {
+  website:    { name: 'Website',        icon: '◉' },
+  gameclient: { name: 'Game Client',    icon: '▶' },
+  auth:       { name: 'Authentication', icon: '⬡' },
+  launch:     { name: 'Game Launch',    icon: '◈' },
+  avatar:     { name: 'Avatar',         icon: '◎' },
+  catalog:    { name: 'Catalog',        icon: '▣' },
+  chat:       { name: 'Chat',           icon: '◇' },
+  economy:    { name: 'Economy',        icon: '◆' },
+  groups:     { name: 'Groups',         icon: '◫' },
+  notifs:     { name: 'Notifications',  icon: '◬' },
+};
+
+let _pulseData = null;
+
+async function populatePulse() {
+  // Show skeleton/loading state immediately
+  renderPulseServices(null);
+  renderPulseTopGames(null);
+  renderPulseActivity(null);
+  document.getElementById('pulse-platform').textContent = 'Checking...';
+  document.getElementById('pulse-platform').style.color = 'var(--text-muted)';
+  document.getElementById('pulse-players').textContent = '—';
+  document.getElementById('pulse-topgame-playing').textContent = '—';
+  document.getElementById('pulse-topgame-name').textContent = '—';
+
+  try {
+    const r = await fetch('/api/proxy?action=pulseData');
+    if (!r.ok) throw new Error('proxy ' + r.status);
+    const d = await r.json();
+    _pulseData = d;
+
+    // ── Stat cards ──────────────────────────────────────
+    const platEl = document.getElementById('pulse-platform');
+    const allUp = (d.services || []).every(s => s.status === 'up');
+    const anyDown = (d.services || []).some(s => s.status === 'down');
+    platEl.textContent = allUp ? '● Operational' : anyDown ? '! Degraded' : '● Operational';
+    platEl.style.color = allUp ? 'var(--success)' : anyDown ? 'var(--warning)' : 'var(--success)';
+
+    const totalPlayers = d.totalPlayers || 0;
+    if (totalPlayers > 0) {
+      document.getElementById('pulse-players').textContent = totalPlayers.toLocaleString() + '+';
+    }
+
+    const topGame = d.topGame || (d.games || [])[0] || null;
+    if (topGame) {
+      document.getElementById('pulse-topgame-playing').textContent = formatPlaying(topGame.playerCount || 0);
+      document.getElementById('pulse-topgame-name').textContent = (topGame.name || 'Unknown').slice(0, 22);
+    }
+
+    document.getElementById('pulse-economy').textContent = d.economySignal || 'Stable';
+
+    // ── Services, games, activity ───────────────────────
+    renderPulseServices(d.services || []);
+    renderPulseTopGames(d.games || []);
+    renderPulseActivity(d.activity || []);
+
+  } catch (err) {
+    // Proxy failed — show degraded state clearly, no fake data
+    const platEl = document.getElementById('pulse-platform');
+    platEl.textContent = '! Proxy Unavailable';
+    platEl.style.color = 'var(--warning)';
+    document.getElementById('pulse-players').textContent = 'N/A';
+    document.getElementById('pulse-topgame-playing').textContent = 'N/A';
+    document.getElementById('pulse-topgame-name').textContent = 'Proxy offline';
+    renderPulseServices([]);   // shows all as unknown
+    renderPulseTopGames([]);
+    renderPulseActivity([]);
+  }
 }
 
-function refreshPulse(){
-  document.getElementById('pulse-platform').textContent='Checking...';
-  document.getElementById('pulse-platform').style.color='var(--warning)';
-  populatePulse().then(()=>{showToast('Rblx Pulse refreshed');});
+function refreshPulse() {
+  _pulseData = null;
+  document.getElementById('pulse-platform').textContent = 'Checking...';
+  document.getElementById('pulse-platform').style.color = 'var(--text-muted)';
+  populatePulse().then(() => { showToast('Rblx Pulse refreshed'); });
 }
 
-function renderPulseServices(status){
-  const platEl=document.getElementById('pulse-platform');
-  const colors={operational:'var(--success)',degraded:'var(--warning)',loading:'var(--text-muted)'};
-  const labels={operational:'● Operational',degraded:'⚠ Degraded',loading:'Checking...'};
-  if(platEl){platEl.textContent=labels[status]||labels.loading;platEl.style.color=colors[status]||colors.loading;}
-  const el=document.getElementById('pulse-services');
-  if(!el)return;
-  // Simulate realistic service statuses based on proxy availability
-  const statuses=PULSE_SERVICES.map((s,i)=>({...s,status:status==='operational'?'up':status==='degraded'&&i>5?'warn':'up'}));
-  el.innerHTML=statuses.map(s=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:18px;">${s.icon}</span>
-      <div style="flex:1;font-size:13px;font-weight:600;">${s.name}</div>
-      <div style="font-size:11px;font-weight:700;color:${s.status==='up'?'var(--success)':s.status==='warn'?'var(--warning)':'var(--danger)'};">
-        ${s.status==='up'?'● UP':s.status==='warn'?'⚠ WARN':'✗ DOWN'}
-      </div>
-    </div>`).join('');
-  document.getElementById('pulse-economy').textContent=status==='operational'?'Stable':'Monitoring';
-}
+// services: array from proxy { key, name, icon, status:'up'|'down' }
+// or null = loading, [] = proxy offline (show unknown)
+function renderPulseServices(services) {
+  const el = document.getElementById('pulse-services');
+  if (!el) return;
 
-function renderPulseTopGames(games){
-  const el=document.getElementById('pulse-top-games');
-  if(!el)return;
-  if(!games||!games.length){
-    el.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading top games data...</div>';
+  if (services === null) {
+    // Loading skeleton
+    el.innerHTML = Object.values(PULSE_SERVICE_META).map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+        <span style="font-size:16px;opacity:.5;">${s.icon}</span>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-secondary);">${s.name}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);">— —</div>
+      </div>`).join('');
     return;
   }
-  el.innerHTML=games.slice(0,5).map((g,i)=>{
-    const placeId=g.placeId||g.rootPlaceId||g.gameId;
-    const playing=g.playerCount||g.playing||0;
-    const visits=g.visits||0;
-    const name=g.name||'Unknown';
-    const creator=g.creatorName||g.creator?.name||'';
-    return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);" ${i===games.slice(0,5).length-1?'style="padding:10px 0;border-bottom:none;"':''}>
-      <div style="font-size:20px;font-weight:800;color:var(--text-muted);width:24px;text-align:center;flex-shrink:0;">${i+1}</div>
+
+  if (!services.length) {
+    // Proxy offline — show all as unknown
+    el.innerHTML = Object.values(PULSE_SERVICE_META).map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+        <span style="font-size:16px;">${s.icon}</span>
+        <div style="flex:1;font-size:13px;font-weight:600;">${s.name}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);">? N/A</div>
+      </div>`).join('');
+    return;
+  }
+
+  // Real data — use icon from PULSE_SERVICE_META keyed by service key (never random)
+  el.innerHTML = services.map(s => {
+    const meta = PULSE_SERVICE_META[s.key] || { name: s.name, icon: '◎' };
+    const statusColor = s.status === 'up' ? 'var(--success)' : s.status === 'down' ? 'var(--danger)' : 'var(--warning)';
+    const statusText = s.status === 'up' ? '● UP' : s.status === 'down' ? '✕ DOWN' : '! WARN';
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <span style="font-size:16px;">${meta.icon}</span>
+      <div style="flex:1;font-size:13px;font-weight:600;">${meta.name}</div>
+      <div style="font-size:13px;font-weight:700;color:${statusColor};">${statusText}</div>
+    </div>`;
+  }).join('');
+
+  // Update economy signal from real services check
+  const econOk = services.find(s => s.key === 'economy');
+  if (econOk) {
+    document.getElementById('pulse-economy').textContent = econOk.status === 'up' ? 'Stable' : 'Monitoring';
+  }
+}
+
+// games: array from proxy, null = loading, [] = no data
+function renderPulseTopGames(games) {
+  const el = document.getElementById('pulse-top-games');
+  if (!el) return;
+
+  if (games === null) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;display:flex;align-items:center;gap:8px;"><div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Fetching live game data...</div>';
+    return;
+  }
+
+  if (!games.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">! Could not load games — proxy unavailable</div>';
+    return;
+  }
+
+  el.innerHTML = games.slice(0, 5).map((g, i) => {
+    const placeId = g.placeId || g.rootPlaceId || 0;
+    const playing = g.playerCount || 0;
+    const visits = g.visits || 0;
+    const name = g.name || 'Unknown';
+    const creator = g.creatorName || '';
+    const isLast = i === Math.min(games.length, 5) - 1;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${isLast ? '' : 'border-bottom:1px solid var(--border);'}">
+      <div style="font-size:13px;font-weight:800;color:var(--text-muted);width:20px;text-align:center;flex-shrink:0;font-family:var(--mono);">${i + 1}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-        ${creator?`<div style="font-size:11px;color:var(--text-muted);">by ${creator}</div>`:''}
+        ${creator ? `<div style="font-size:11px;color:var(--text-muted);">by ${creator}</div>` : ''}
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:13px;font-weight:700;color:var(--success);">▶ ${formatPlaying(playing)}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${formatVisits(visits)}</div>
+        ${visits ? `<div style="font-size:11px;color:var(--text-muted);">${formatVisits(visits)}</div>` : ''}
       </div>
-      <a href="https://www.roblox.com/games/${placeId}" target="_blank" class="btn-sm" style="flex-shrink:0;">Play ↗</a>
+      ${placeId ? `<a href="https://www.roblox.com/games/${placeId}" target="_blank" class="btn-sm" style="flex-shrink:0;">Play ↗</a>` : ''}
     </div>`;
   }).join('');
 }
 
-function renderPulseActivity(){
-  const el=document.getElementById('pulse-activity-feed');
-  if(!el)return;
-  const now=Date.now();
-  const activities=[
-    {icon:'🎮',text:'Peak concurrent players across platform: 3.2M+',time:'Live'},
-    {icon:'📈',text:'Top trending genre today: Roleplay & Social',time:'Today'},
-    {icon:'💎',text:'Limited item trades active in economy',time:'Ongoing'},
-    {icon:'🏗️',text:'Studio updates & new asset types being published',time:'Ongoing'},
-    {icon:'🔔',text:'Platform status: All major services operational',time:'Live'},
-    {icon:'🌍',text:'Global server coverage across NA, EU, APAC',time:'Ongoing'},
-  ];
-  el.innerHTML=activities.map((a,i)=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid ${i<activities.length-1?'var(--border)':'transparent'};">
-      <div style="font-size:18px;flex-shrink:0;">${a.icon}</div>
+// activity: array from proxy { icon, text, time } — real items built server-side
+// null = loading, [] = proxy offline
+function renderPulseActivity(activity) {
+  const el = document.getElementById('pulse-activity-feed');
+  if (!el) return;
+
+  if (activity === null) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading activity...</div>';
+    return;
+  }
+
+  if (!activity.length) {
+    // Proxy offline — show only static factual items, clearly labeled
+    el.innerHTML = [
+      { icon: '◉', text: 'Platform status unavailable — proxy offline', time: 'Error' },
+      { icon: '◎', text: 'Global server coverage across NA, EU, APAC', time: 'Static' },
+    ].map((a, i, arr) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid ${i < arr.length - 1 ? 'var(--border)' : 'transparent'};">
+        <div style="font-size:15px;flex-shrink:0;color:var(--text-muted);">${a.icon}</div>
+        <div style="flex:1;font-size:13px;color:var(--text-secondary);">${a.text}</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--danger);flex-shrink:0;">${a.time}</div>
+      </div>`).join('');
+    return;
+  }
+
+  el.innerHTML = activity.map((a, i) => {
+    const isLive = a.time === 'Live';
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid ${i < activity.length - 1 ? 'var(--border)' : 'transparent'};">
+      <div style="font-size:15px;flex-shrink:0;color:${isLive ? 'var(--success)' : 'var(--text-secondary)'};">${a.icon}</div>
       <div style="flex:1;font-size:13px;color:var(--text-secondary);">${a.text}</div>
-      <div style="font-size:11px;font-family:var(--mono);color:${a.time==='Live'?'var(--success)':'var(--text-muted)'};flex-shrink:0;">${a.time==='Live'?'● Live':a.time}</div>
-    </div>`).join('');
+      <div style="font-size:11px;font-family:var(--mono);color:${isLive ? 'var(--success)' : 'var(--text-muted)'};flex-shrink:0;">${isLive ? '● Live' : a.time}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── I18N (English only) ─────────────────
