@@ -46,10 +46,12 @@ async function getRolimonsData() {
   return _rolimonsCache || {};
 }
 
-async function getCatalogItem(keyword) {
+async function getCatalogItem(keyword, category = '2', subcategory = '') {
   try {
     const encoded = encodeURIComponent(keyword);
-    const r = await fetchUrl(`https://catalog.roblox.com/v1/search/items/details?Category=2&Keyword=${encoded}&Limit=10&SortType=Relevance`);
+    let qs = `Category=${encodeURIComponent(category)}&Keyword=${encoded}&Limit=10&SortType=Relevance`;
+    if (subcategory) qs += `&Subcategory=${encodeURIComponent(subcategory)}`;
+    const r = await fetchUrl(`https://catalog.roblox.com/v1/search/items/details?${qs}`);
     if (r.status === 200) {
       const d = JSON.parse(r.body);
       return d.data || [];
@@ -125,6 +127,8 @@ module.exports = async (req, res) => {
 
   const q = (req.query.q || '').trim();
   const id = req.query.id ? Number(req.query.id) : null;
+  const category = req.query.category || '2';
+  const subcategory = req.query.subcategory || '';
 
   if (!q && !id) {
     res.status(400).json({ error: 'Provide q (search term) or id (asset ID)' });
@@ -137,7 +141,7 @@ module.exports = async (req, res) => {
     // ── SEARCH BY ASSET ID ────────────────────────────
     if (id) {
       const roliData = rolimonsItems[id];
-      const catalogItems = await getCatalogItem(roliData ? roliData[0] : String(id));
+      const catalogItems = await getCatalogItem(roliData ? roliData[0] : String(id), category, subcategory);
       const catalogItem = catalogItems.find(i => i.id === id) || catalogItems[0] || null;
       const thumbMap = await getThumbnails([id]);
       const result = buildItemResult(id, roliData, catalogItem, thumbMap[id]);
@@ -162,7 +166,7 @@ module.exports = async (req, res) => {
     }
 
     // 2. Also search Roblox catalog
-    const catalogItems = await getCatalogItem(q);
+    const catalogItems = await getCatalogItem(q, category, subcategory);
 
     // 3. Merge — prefer Rolimons hits, fill in catalog data
     const seen = new Set();
