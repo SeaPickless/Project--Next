@@ -139,24 +139,94 @@ async function resolveUsername(username) {
 }
 
 // Normalize a raw game object from any Roblox games API endpoint
-// FIX: maps .playing (not .playerCount) for active concurrent players
+// Handles both v1/games/list shape and v2/games shape
 function normalizeGame(g) {
+  // v2/games wraps data differently — placeId lives at rootPlaceId
+  const placeId = g.rootPlaceId || g.placeId || g.PlaceId || g.gameId || 0;
+  const universeId = g.id || g.universeId || 0;
   return {
-    name         : g.name || g.Name || 'Unknown',
-    placeId      : g.placeId || g.rootPlaceId || g.PlaceId || g.universeId || 0,
-    rootPlaceId  : g.rootPlaceId || g.placeId || 0,
-    universeId   : g.universeId || g.id || 0,
-    // FIX #2: .playing is the correct field for active concurrent players
-    playerCount  : g.playing || g.playerCount || g.activePlayerCount || 0,
-    visits       : g.visits || g.Visits || 0,
-    totalUpVotes : g.totalUpVotes || g.upVotes || 0,
-    totalDownVotes: g.totalDownVotes || g.downVotes || 0,
-    favoritedCount: g.favoritedCount || g.favorites || 0,
-    creatorName  : g.creatorName || g.creator?.name || (typeof g.creator === 'string' ? g.creator : '') || '',
-    genre        : g.genre || g.Genre || '',
-    subGenre     : g.subGenre || '',
-    thumbnailUrl : g.thumbnailUrl || '',
+    name           : g.name || g.Name || 'Unknown',
+    placeId,
+    rootPlaceId    : placeId,
+    universeId,
+    // .playing is the correct live-player field (v2); v1 uses .playerCount
+    playerCount    : g.playing || g.playerCount || g.activePlayerCount || 0,
+    visits         : g.visits || g.Visits || 0,
+    totalUpVotes   : g.totalUpVotes || g.upVotes || 0,
+    totalDownVotes : g.totalDownVotes || g.downVotes || 0,
+    favoritedCount : g.favoritedCount || g.favorites || 0,
+    creatorName    : g.creatorName || g.creator?.name || (typeof g.creator === 'string' ? g.creator : '') || '',
+    genre          : g.genre || g.Genre || g.subGenre || '',
+    thumbnailUrl   : g.thumbnailUrl || '',
   };
+}
+
+// ── UNIVERSE IDs → thumbnails ─────────────────────────────
+async function fetchUniverseThumbnails(universeIds) {
+  if (!universeIds || !universeIds.length) return {};
+  const ids = [...new Set(universeIds.filter(Boolean))].slice(0, 50).join(',');
+  const r = await rbx(
+    `https://thumbnails.roblox.com/v1/games/icons?universeIds=${ids}&returnPolicy=PlaceHolder&size=512x512&format=Png`
+  );
+  const map = {};
+  (r.data?.data || []).forEach(t => { if (t.state === 'Completed') map[t.targetId] = t.imageUrl; });
+  return map;
+}
+
+// ── PLACE IDs → universeIds (batch) ──────────────────────
+async function placeIdsToUniverseIds(placeIds) {
+  if (!placeIds || !placeIds.length) return {};
+  const ids = [...new Set(placeIds.filter(Boolean))].slice(0, 50).join(',');
+  // Try both known endpoints
+  let data = [];
+  const r1 = await rbx(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${ids}`);
+  if (r1.ok && Array.isArray(r1.data)) data = r1.data;
+  if (!data.length) {
+    const r2 = await rbx(`https://apis.roblox.com/universes/v1/places?placeIds=${ids}`);
+    data = r2.data?.data || [];
+  }
+  const map = {};
+  data.forEach(p => {
+    const pid = p.placeId || p.PlaceId;
+    const uid = p.universeId || p.UniverseId;
+    if (pid && uid) map[pid] = uid;
+  });
+  return map;
+}
+
+// ── ENRICH games with thumbnails ──────────────────────────
+async function enrichWithThumbnails(games) {
+  // games already have universeId from v2 endpoint; collect both
+  const universeIds = games.map(g => g.universeId).filter(Boolean);
+  const placeIds    = games.map(g => g.placeId).filter(Boolean);
+
+  let thumbMap = {};
+
+  // Try universeId-based lookup first (most reliable)
+  if (universeIds.length) {
+    thumbMap = await fetchUniverseThumbnails(universeIds).catch(() => ({}));
+  }
+
+  // For games that still have no thumb, try resolving placeId → universeId
+  const missing = games.filter(g => !thumbMap[g.universeId] && g.placeId);
+  if (missing.length) {
+    const placeMap = await placeIdsToUniverseIds(missing.map(g => g.placeId)).catch(() => ({}));
+    const extraUniverseIds = Object.values(placeMap).filter(Boolean);
+    if (extraUniverseIds.length) {
+      const extraThumbs = await fetchUniverseThumbnails(extraUniverseIds).catch(() => ({}));
+      Object.assign(thumbMap, extraThumbs);
+      // Back-fill placeId → thumbnail via the placeMap
+      missing.forEach(g => {
+        const uid = placeMap[g.placeId];
+        if (uid && extraThumbs[uid]) thumbMap[g.universeId || g.placeId] = extraThumbs[uid];
+      });
+    }
+  }
+
+  return games.map(g => ({
+    ...g,
+    thumbnailUrl: thumbMap[g.universeId] || thumbMap[g.placeId] || g.thumbnailUrl || '',
+  }));
 }
 
 // ── ACTIONS ───────────────────────────────────────────
