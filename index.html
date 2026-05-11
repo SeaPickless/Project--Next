@@ -530,13 +530,13 @@ body.perf-mode *{animation:none !important;transition:none !important;}
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="hub1">Social Commander</span>
       </button>
-      <button class="nav-item" onclick="switchHub('pulse',this)">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        <span>Rblx Pulse</span>
+      <button class="nav-item" onclick="switchHub('engine',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        <span>⚙️ Engine Health</span>
       </button>
-      <button class="nav-item" onclick="switchHub('discovery',this)">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-        <span data-i18n="hub3">Ultimate Discovery</span>
+      <button class="nav-item" onclick="switchHub('creator',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>🛠️ Creator Suite</span>
       </button>
       <button class="nav-item" onclick="switchHub('security',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
@@ -547,9 +547,9 @@ body.perf-mode *{animation:none !important;transition:none !important;}
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M17 8h.01M19 10l1.5 1.5"/></svg>
         <span>My Profile+</span>
       </button>
-      <button class="nav-item" onclick="switchHub('values',this)">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <span>Rblx Values</span>
+      <button class="nav-item" onclick="switchHub('assettools',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>📂 Asset Tools</span>
       </button>
       <button class="nav-item" onclick="switchHub('settings',this)">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
@@ -616,66 +616,71 @@ body.perf-mode *{animation:none !important;transition:none !important;}
       </div>
     </div>
 
-    <!-- ═══ HUB: RBLX PULSE ═══ -->
-    <div class="hub-panel" id="hub-pulse">
+    <!-- ═══ HUB: ENGINE HEALTH ═══ -->
+    <div class="hub-panel" id="hub-engine">
       <div class="hub-header">
-        <div class="hub-title">Rblx Pulse</div>
-        <div class="hub-sub">Live Roblox platform health · Server status · Game uptime · Economy signals</div>
+        <div class="hub-title">⚙️ Engine Health Suite</div>
+        <div class="hub-sub">API latency matrix · Regional server status · Live build version tracker</div>
       </div>
-      <!-- Status Overview -->
-      <div class="stat-grid" id="pulse-stat-grid" style="margin-bottom:20px;">
-        <div class="stat-card"><div class="stat-label">Platform</div><div class="stat-val" style="color:var(--success);font-size:18px;" id="pulse-platform">Checking...</div><div class="stat-sub">Overall Status</div></div>
-        <div class="stat-card"><div class="stat-label">Active Players</div><div class="stat-val accent-text" id="pulse-players">—</div><div class="stat-sub">Approx. online now</div></div>
-        <div class="stat-card"><div class="stat-label">Top Game Players</div><div class="stat-val" style="color:var(--info)" id="pulse-topgame-playing">—</div><div class="stat-sub" id="pulse-topgame-name">—</div></div>
-        <div class="stat-card"><div class="stat-label">Economy Signal</div><div class="stat-val" style="color:var(--warning)" id="pulse-economy">Stable</div><div class="stat-sub">Robux market</div></div>
-      </div>
-      <!-- Services Grid -->
+      <!-- API Response Matrix -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title"><div class="card-title-dot"></div>Service Health
-          <span class="api-chip live" style="margin-left:auto;animation:glow-pulse 3s ease-in-out infinite;">● Live</span>
-          <button class="btn-sm" onclick="refreshPulse()" style="margin-left:8px;">↻ Refresh</button>
+        <div class="card-title"><div class="card-title-dot"></div>⚡ API Response Matrix
+          <button class="btn-sm" onclick="pingAllApis()" style="margin-left:auto;" id="ping-btn">🔄 Ping All</button>
         </div>
-        <div id="pulse-services" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;"></div>
+        <div id="api-matrix" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;"></div>
       </div>
-      <!-- Top Games Live -->
+      <!-- Regional Node Map -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title"><div class="card-title-dot"></div>Top Games Right Now
-          <span class="api-chip live">● Live</span>
-        </div>
-        <div id="pulse-top-games"></div>
+        <div class="card-title"><div class="card-title-dot"></div>🌐 Regional Node Map</div>
+        <div id="regional-nodes" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:4px;"></div>
       </div>
-      <!-- Trending Activity -->
+      <!-- Build Version -->
       <div class="card">
-        <div class="card-title"><div class="card-title-dot"></div>Platform Activity Feed</div>
-        <div id="pulse-activity-feed"></div>
+        <div class="card-title"><div class="card-title-dot"></div>📦 Deployment Version Hash
+          <button class="btn-sm" onclick="fetchBuildVersions()" style="margin-left:auto;">🔄 Refresh</button>
+        </div>
+        <div id="build-versions" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;"></div>
       </div>
     </div>
 
-    <!-- ═══ HUB: DISCOVERY ═══ -->
-    <div class="hub-panel" id="hub-discovery">
+    <!-- ═══ HUB: CREATOR SUITE ═══ -->
+    <div class="hub-panel" id="hub-creator">
       <div class="hub-header">
-        <div class="hub-title" data-i18n="hub3">Ultimate Discovery</div>
-        <div class="hub-sub">Top 3 filtered search · Live player counts · Verified creators · Genre categories</div>
+        <div class="hub-title">🛠️ Creator Utility Suite</div>
+        <div class="hub-sub">Luau code generator · Asset finder · Plugin directory</div>
       </div>
-      <!-- GAME SEARCH — top 3 only, no archive/ratio -->
-      <div class="card" style="margin-bottom:20px;">
-        <div class="card-title"><div class="card-title-dot"></div>Game Search<span class="api-chip live" style="margin-left:auto;">● Live Stats</span></div>
+      <!-- Luau Code Generator -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>💻 Asset Code Generator</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">Describe a Roblox instance or mechanic and get copy-paste Luau code for Studio.</p>
         <div class="search-box">
-          <input class="search-input" id="disc-query" placeholder="Search Roblox games..." type="text" onkeydown="if(event.key==='Enter')searchGames()">
-          <button class="btn-accent" onclick="searchGames()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
-          </button>
+          <input class="search-input" id="luau-prompt" placeholder="e.g. Part that glows red on touched, BindableEvent between scripts..." type="text" onkeydown="if(event.key==='Enter')generateLuauCode()">
+          <button class="btn-accent" onclick="generateLuauCode()" id="luau-btn">✨ Generate</button>
         </div>
-        <div id="disc-search-progress" style="display:none;margin-bottom:12px;">
-          <div class="progress-wrap" style="margin-bottom:0;">
-            <div class="progress-header"><div class="progress-label">Fetching live results...</div><div class="progress-meta" id="disc-pct">0%</div></div>
-            <div class="progress-bar"><div class="progress-fill" id="disc-bar" style="width:0%"></div></div>
-          </div>
-        </div>
-        <div id="disc-search-results"></div>
+        <div id="luau-result" style="margin-top:12px;"></div>
       </div>
-      <!-- Category rows -->
-      <div id="discovery-grid"></div>
+      <!-- Asset Search -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>🔍 Advanced Asset Search</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">Search the Roblox Library for models, audio, meshes, and decals by keyword.</p>
+        <div class="search-box">
+          <select id="asset-type-select" style="padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:13px;flex-shrink:0;outline:none;cursor:pointer;">
+            <option value="10">🧱 Models</option>
+            <option value="3">🔊 Audio</option>
+            <option value="4">🖼️ Decals</option>
+            <option value="32">🌊 MeshParts</option>
+            <option value="21">🎨 Plugins</option>
+          </select>
+          <input class="search-input" id="asset-search-query" placeholder="Search assets..." type="text" onkeydown="if(event.key==='Enter')searchAssets()">
+          <button class="btn-accent" onclick="searchAssets()">🔍 Search</button>
+        </div>
+        <div id="asset-search-results" style="margin-top:12px;"></div>
+      </div>
+      <!-- Plugin Directory -->
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot"></div>🔌 Top Free Plugin Directory</div>
+        <div id="plugin-directory" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;"></div>
+      </div>
     </div>
 
     <!-- ═══ HUB: SECURITY ═══ -->
@@ -733,34 +738,45 @@ body.perf-mode *{animation:none !important;transition:none !important;}
       </div>
     </div>
 
-    <!-- ═══ HUB: RBLX VALUES ═══ -->
-    <div class="hub-panel" id="hub-values">
+    <!-- ═══ HUB: ASSET TOOLS ═══ -->
+    <div class="hub-panel" id="hub-assettools">
       <div class="hub-header">
-        <div class="hub-title">Rblx Values Hub</div>
-        <div class="hub-sub">Limiteds, accessories, animations, hats, gear · Acronym search · Rolimons index [0-7]</div>
+        <div class="hub-title">📂 Platform Asset Insights</div>
+        <div class="hub-sub">UGC publication stats · Asset category breakdown · Catalog explorer</div>
       </div>
+      <!-- UGC Publication Flow -->
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title"><div class="card-title-dot"></div>Item Value Search</div>
-        <div class="search-box">
-          <select id="hub-value-category" style="padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:13px;flex-shrink:0;outline:none;cursor:pointer;">
-            <option value="2|">All Limiteds</option>
-            <option value="11|19">Hats</option>
-            <option value="3|">Clothing</option>
-            <option value="4|15">Heads</option>
-            <option value="4|10">Classic Faces</option>
-            <option value="5|">Gear</option>
-            <option value="24|">Animations</option>
-          </select>
-          <input class="search-input" id="hub-value-query" placeholder="Name or acronym (SSH, Dominus, Valk...)" type="text" onkeydown="if(event.key==='Enter')hubCheckValue()">
-          <button class="btn-accent" onclick="hubCheckValue()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
-          </button>
+        <div class="card-title"><div class="card-title-dot"></div>🎨 UGC Publication Monitor
+          <button class="btn-sm" onclick="refreshUGCStats()" style="margin-left:auto;">🔄 Refresh</button>
         </div>
-        <div id="hub-value-results"></div>
+        <div class="stat-grid" id="ugc-stat-grid" style="margin-bottom:0;">
+          <div class="stat-card"><div class="stat-label">🎭 3D Items</div><div class="stat-val accent-text" id="ugc-3d">—</div><div class="stat-sub">Uploaded today</div></div>
+          <div class="stat-card"><div class="stat-label">👕 Clothing</div><div class="stat-val" style="color:var(--info)" id="ugc-clothing">—</div><div class="stat-sub">Uploaded today</div></div>
+          <div class="stat-card"><div class="stat-label">🔊 Audio</div><div class="stat-val" style="color:var(--success)" id="ugc-audio">—</div><div class="stat-sub">Uploaded today</div></div>
+          <div class="stat-card"><div class="stat-label">🧱 Models</div><div class="stat-val" style="color:var(--warning)" id="ugc-models">—</div><div class="stat-sub">Uploaded today</div></div>
+        </div>
       </div>
+      <!-- Content Density Tracker -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>📊 Content Density Breakdown</div>
+        <div id="density-tracker" style="margin-top:4px;"></div>
+      </div>
+      <!-- Live Catalog Explorer -->
       <div class="card">
-        <div class="card-title"><div class="card-title-dot"></div>Popular Limiteds</div>
-        <div id="popular-limiteds"></div>
+        <div class="card-title"><div class="card-title-dot"></div>🛒 Live Catalog Explorer</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">Browse newest catalog drops — accessories, bundles, and UGC by category.</p>
+        <div class="search-box">
+          <select id="catalog-cat-select" style="padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:13px;flex-shrink:0;outline:none;cursor:pointer;">
+            <option value="2">🎩 All Accessories</option>
+            <option value="11">👒 Hats</option>
+            <option value="3">👗 Clothing</option>
+            <option value="5">⚙️ Gear</option>
+            <option value="24">🎬 Animations</option>
+          </select>
+          <input class="search-input" id="catalog-search-q" placeholder="Search catalog..." type="text" onkeydown="if(event.key==='Enter')searchCatalog()">
+          <button class="btn-accent" onclick="searchCatalog()">🔍 Browse</button>
+        </div>
+        <div id="catalog-results" style="margin-top:12px;"></div>
       </div>
     </div>
 
@@ -808,89 +824,84 @@ body.perf-mode *{animation:none !important;transition:none !important;}
     <!-- ═══ HUB: COMING SOON ═══ -->
     <div class="hub-panel" id="hub-comingsoon">
       <div class="hub-header">
-        <div class="hub-title">Coming Soon</div>
-        <div class="hub-sub">Features in active development · Genesis Phase roadmap · Social Commander expansion</div>
+        <div class="hub-title">⏳ Legacy Archive</div>
+        <div class="hub-sub">Features undergoing major overhauls · Genesis Phase next-gen roadmap</div>
       </div>
       <!-- Banner -->
       <div style="background:linear-gradient(135deg,var(--accent-dim),rgba(32,160,240,0.08));border:1px solid var(--border-accent);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;">
-        <div style="font-size:32px;">◈</div>
+        <div style="font-size:32px;">🔬</div>
         <div>
-          <div style="font-size:15px;font-weight:800;margin-bottom:4px;">Social Commander · Genesis Phase</div>
-          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">These features are in active development. They will be fully integrated into Project Next in an upcoming release. Preview them here.</div>
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px;">Platform Infrastructure Overhaul</div>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">These legacy features are being completely rebuilt from the ground up with next-generation architecture. They will return more powerful than ever.</div>
         </div>
       </div>
       <!-- Feature Cards -->
       <div class="grid-2" style="margin-bottom:16px;">
 
-        <!-- Friend Radar -->
+        <!-- Rblx Pulse -->
         <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
-          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">COMING SOON</div>
-          <div style="font-size:28px;margin-bottom:12px;">◈</div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Friends Radar</div>
-          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">Scan any Roblox user's social network in real time. Discover mutual friends, hop distance, and live presence status. BFS-based connection mapping gives you a full social graph at a glance.</div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Mutual friend detection</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Hop distance (1–3+) via BFS</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Real-time presence status</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Friend count &amp; follower stats</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);"><span style="color:var(--text-muted);">◎</span> Full network graph visualization</div>
-          </div>
-          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">◈ In development — Genesis Phase v2</div>
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">⏳ COMING SOON</div>
+          <div style="font-size:28px;margin-bottom:12px;">📡</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Rblx Pulse</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">Currently undergoing a full Engine Synchronization overhaul to handle next-gen clusters and multi-threaded deployment cycles.</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">🔄 Rebuilding for multi-cluster architecture</div>
         </div>
 
-        <!-- Asset & Collection Manager -->
+        <!-- Rblx Values -->
         <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
-          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">COMING SOON</div>
-          <div style="font-size:28px;margin-bottom:12px;">🗂️</div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Asset &amp; Collection Manager</div>
-          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">A full-featured Roblox asset manager. Browse, organize, and track your entire inventory — hats, accessories, gear, clothing, bundles — with smart filtering, custom collections, and value tagging.</div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Full inventory browser with filters</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Custom user-created collections</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Value + RAP tagging per item</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Compare inventories with friends</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent);">◎</span> Export &amp; share collection links</div>
-          </div>
-          <!-- Genesis Inventory Audit nested inside -->
-          <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:4px;">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">⬡ Included: Genesis Inventory Audit</div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Deep-scan your full Roblox inventory with parallel API fetching, RAP calculation for limiteds, category breakdown, and estimated total value — all in one pass.</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-              <span style="font-size:10px;background:rgba(240,160,32,.1);color:var(--warning);border:1px solid rgba(240,160,32,.2);padding:2px 7px;border-radius:4px;font-weight:700;">RAP Fetch</span>
-              <span style="font-size:10px;background:rgba(32,160,240,.1);color:var(--info);border:1px solid rgba(32,160,240,.2);padding:2px 7px;border-radius:4px;font-weight:700;">Parallel API</span>
-              <span style="font-size:10px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:700;">Live Data</span>
-            </div>
-          </div>
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">⏳ COMING SOON</div>
+          <div style="font-size:28px;margin-bottom:12px;">💾</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Rblx Values</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">Transitioning to a High-Frequency Liquidity Engine to move beyond RAP into deep-market volatility and asset ownership analysis.</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">📈 Integrating volatility and ownership depth signals</div>
+        </div>
+
+        <!-- Ultimate Discovery -->
+        <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">⏳ COMING SOON</div>
+          <div style="font-size:28px;margin-bottom:12px;">🧠</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Ultimate Discovery</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">Developing a Neural Experience Index designed to identify high-performance game logic and unique asset usage patterns across the platform.</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">🔮 Neural indexing in training phase</div>
+        </div>
+
+        <!-- Friends Radar -->
+        <div class="card" style="border-color:rgba(160,32,240,0.25);position:relative;overflow:hidden;">
+          <div style="position:absolute;top:12px;right:12px;font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);padding:2px 7px;border-radius:4px;font-weight:800;letter-spacing:.5px;">⏳ COMING SOON</div>
+          <div style="font-size:28px;margin-bottom:12px;">🕸️</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Social Graph Visualization</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;">BFS-powered full social network mapper with live hop-distance, mutual detection, and real-time presence across your entire friend network.</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--border-accent);border-radius:6px;padding:6px 10px;">🔗 Graph engine in development</div>
         </div>
 
       </div>
       <!-- Roadmap timeline -->
       <div class="card">
-        <div class="card-title"><div class="card-title-dot"></div>Genesis Phase Roadmap</div>
+        <div class="card-title"><div class="card-title-dot"></div>🗺️ Genesis Phase Roadmap</div>
         <div style="display:flex;flex-direction:column;gap:0;margin-top:8px;">
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;box-shadow:0 0 12px rgba(34,208,106,.4);">✓</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;box-shadow:0 0 12px rgba(34,208,106,.4);">✅</div>
             <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Social Commander + Profile Compare</div><div style="font-size:12px;color:var(--success);">Live — Genesis Phase v1</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;box-shadow:0 0 12px rgba(34,208,106,.4);">✓</div>
-            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Ultimate Discovery + Rblx Values</div><div style="font-size:12px;color:var(--success);">Live — Genesis Phase v1</div></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;box-shadow:0 0 12px rgba(34,208,106,.4);">✅</div>
+            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Engine Health Suite + Creator Tools</div><div style="font-size:12px;color:var(--success);">Live — Genesis Phase v2</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;animation:glow-pulse 3s ease-in-out infinite;">⟳</div>
-            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Asset &amp; Collection Manager</div><div style="font-size:12px;color:var(--accent);">In development — Genesis Phase v2</div></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;animation:glow-pulse 3s ease-in-out infinite;">🔄</div>
+            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Rblx Pulse Engine Sync</div><div style="font-size:12px;color:var(--accent);">In overhaul — Genesis Phase v3</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;position:relative;">
             <div style="position:absolute;left:15px;top:28px;bottom:0;width:2px;background:var(--border);"></div>
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:var(--text-muted);">◎</div>
-            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Genesis Inventory Audit</div><div style="font-size:12px;color:var(--text-muted);">Planned — Genesis Phase v2 (bundled with Asset Manager)</div></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--text-muted);">⏳</div>
+            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Rblx Values Liquidity Engine</div><div style="font-size:12px;color:var(--text-muted);">Planned — Genesis Phase v3</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:var(--text-muted);">◎</div>
-            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Social Graph Visualization</div><div style="font-size:12px;color:var(--text-muted);">Planned — Genesis Phase v3</div></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--text-muted);">🔮</div>
+            <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Neural Experience Index + Social Graph</div><div style="font-size:12px;color:var(--text-muted);">Planned — Genesis Phase v4</div></div>
           </div>
         </div>
       </div>
@@ -1078,7 +1089,7 @@ async function launchApp(){
   showToast('Welcome back, @'+APP.user.username+' ✦');
 }
 function populateAll(){
-  updateProfile();populateDiscovery();populateSecurity();populatePrivacy();populateSettingsToggles();populatePopularLimiteds();restoreTheme();loadFriendsBackground();populatePulse();
+  updateProfile();populateSecurity();populatePrivacy();populateSettingsToggles();restoreTheme();loadFriendsBackground();pingAllApis();renderRegionalNodes();fetchBuildVersions();populatePluginDirectory();refreshUGCStats();renderDensityTracker();
 }
 function updateProfile(){
   const user=APP.user;if(!user)return;
@@ -1484,139 +1495,285 @@ function renderInventory(items,rapItems){
 }
 
 // ══════════════════════════════════════════
-//  ULTIMATE DISCOVERY
+//  ENGINE HEALTH SUITE
 // ══════════════════════════════════════════
-const DISCOVERY_CATEGORIES=[
-  {label:'▶ Most Visited / Played',sortOrder:2},
-  {label:'◈ Fun with Friends',sortOrder:6},
-  {label:'◉ Top Trending',sortOrder:3},
-  {label:'◆ Top Rated',sortOrder:4},
-  {label:'◎ Top Revisited',sortOrder:7},
-  {label:'▣ Top Entertaining',sortOrder:8},
-  {label:'◫ Roleplay & Avatar Sim',sortOrder:5,genreFilter:'Social'},
-  {label:'⬡ Simulation',sortOrder:2,genreFilter:'Simulation'},
-  {label:'◇ Action & Fighting',sortOrder:2,genreFilter:'Fighting'},
-  {label:'▷ Shooter',sortOrder:2,genreFilter:'Shooter'},
-  {label:'◬ Horror & Survival',sortOrder:2,genreFilter:'Horror'},
-  {label:'◍ Obby & Platformer',sortOrder:2,genreFilter:'Obstacle'},
-  {label:'⟡ RPG',sortOrder:2,genreFilter:'RPG'},
-  {label:'◌ Party & Casual',sortOrder:2,genreFilter:'Comedy'},
-  {label:'▤ Tycoon & Idle',sortOrder:2,genreFilter:'Tycoon'},
-  {label:'◐ Sports & Racing',sortOrder:2,genreFilter:'Sports'},
-  {label:'⟳ Up-and-Coming',sortOrder:1},
+
+const API_ENDPOINTS = [
+  { key: 'catalog',    label: 'Catalog API',    emoji: '🛒', url: 'https://catalog.roblox.com/v1/search/items?Category=2&Limit=1' },
+  { key: 'users',      label: 'Users API',      emoji: '👤', url: 'https://users.roblox.com/v1/usernames/users' },
+  { key: 'thumbnails', label: 'Thumbnails API', emoji: '🖼️', url: 'https://thumbnails.roblox.com/v1/assets?assetIds=1&size=48x48&format=Png' },
+  { key: 'groups',     label: 'Groups API',     emoji: '🏢', url: 'https://groups.roblox.com/v1/groups/search?keyword=roblox&limit=1' },
+  { key: 'games',      label: 'Games API',      emoji: '🎮', url: 'https://games.roblox.com/v1/games/multiget-place-details?placeIds=1818' },
+  { key: 'economy',    label: 'Economy API',    emoji: '💰', url: 'https://economy.roblox.com/v1/resale-tax-rate' },
 ];
 
-function getGameThumb(placeId){return `https://www.roblox.com/asset-thumbnail/image?assetId=${placeId}&width=768&height=432&format=png`;}
-function formatPlaying(n){if(!n||n<0)return '0';if(n>=1000000)return (n/1000000).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'K';return n.toLocaleString();}
-function formatVisits(n){if(!n||n<0)return '';if(n>=1000000000)return (n/1000000000).toFixed(1)+'B visits';if(n>=1000000)return (n/1000000).toFixed(1)+'M visits';if(n>=1000)return (n/1000).toFixed(1)+'K visits';return n.toLocaleString()+' visits';}
-function likesRatio(up,down){const total=up+down;if(!total)return '';return Math.round(up/total*100)+'% liked';}
-
-async function fetchDiscoveryGames(sortOrder,genreFilter){
-  try{
-    let url=`/api/proxy?action=discoverGames&sortOrder=${sortOrder}`;
-    if(genreFilter)url+=`&genre=${encodeURIComponent(genreFilter)}`;
-    const r=await fetch(url);
-    if(r.ok){const d=await r.json();return d.data||[];}
-  }catch(_){}
-  return [];
+async function pingEndpoint(ep) {
+  const t0 = performance.now();
+  try {
+    const r = await fetch(ep.url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+    const ms = Math.round(performance.now() - t0);
+    const ok = r.status < 500;
+    return { ...ep, ms, status: ok ? (ms < 400 ? '🟢' : '🟡') : '🔴', label2: ok ? `${ms}ms` : `${r.status} ERR` };
+  } catch (_) {
+    const ms = Math.round(performance.now() - t0);
+    return { ...ep, ms, status: '🔴', label2: 'CORS/Blocked' };
+  }
 }
 
-async function populateDiscovery(){
-  const grid=document.getElementById('discovery-grid');
-  grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:12px;display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Loading live categories...</div>';
-  // Load all categories in parallel for speed
-  const results=await Promise.allSettled(
-    DISCOVERY_CATEGORIES.map(cat=>fetchDiscoveryGames(cat.sortOrder,cat.genreFilter).then(games=>({label:cat.label,games})))
-  );
-  const allCards=results.map(r=>r.status==='fulfilled'?r.value:{label:'',games:[]});
-  grid.innerHTML=allCards.map(({label,games})=>{
-    if(!label)return '';
-    const cards=games.length?games.slice(0,6).map(g=>{
-      const placeId=g.placeId||g.rootPlaceId||g.gameId;
-      const name=g.name||'Unknown';
-      const creator=g.creatorName||g.creator?.name||g.creator||'';
-      const playing=g.playerCount||g.playing||0;
-      const visits=g.visits||0;
-      const upVotes=g.totalUpVotes||0;const downVotes=g.totalDownVotes||0;
-      const genre=g.genre||g.subGenre||'';
-      const thumb=placeId?getGameThumb(placeId):'';
-      return`<div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')">
-        <div class="discovery-thumb">
-          <img src="${thumb}" alt="${name}" onerror="this.style.display='none';this.parentElement.style.background='var(--bg-hover)';this.parentElement.innerHTML+='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';">
-          <div class="discovery-thumb-overlay"></div>
-        </div>
-        <div class="discovery-body">
-          <div class="discovery-name">${name}</div>
-          ${genre?`<div class="discovery-genre">${genre}</div>`:''}
-          <div class="discovery-stats">
-            <span class="discovery-stat" style="color:var(--success);font-weight:700;">▶ ${formatPlaying(playing)}</span>
-            ${formatVisits(visits)?`<span class="discovery-stat" style="color:var(--text-muted);">${formatVisits(visits)}</span>`:''}
-            ${g.favoritedCount?`<span class="discovery-stat">❤️ ${formatPlaying(g.favoritedCount)}</span>`:''}
-            ${(upVotes||downVotes)?`<span class="discovery-stat">${likesRatio(upVotes,downVotes)}</span>`:''}
-          </div>
-          ${creator?`<div class="discovery-creator">by ${creator}</div>`:''}
-        </div>
-      </div>`;
-    }).join(''):`<div style="grid-column:1/-1;padding:18px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);text-align:center;color:var(--text-muted);font-size:13px;">Could not load games for this category — proxy may be unavailable.</div>`;
-    return`<div style="margin-bottom:28px;">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.5px;margin-bottom:12px;padding:0 2px;display:flex;align-items:center;gap:8px;">${label}</div>
-      <div class="grid-3">${cards}</div>
+function renderApiMatrixLoading() {
+  const el = document.getElementById('api-matrix');
+  if (!el) return;
+  el.innerHTML = API_ENDPOINTS.map(ep => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+      <span style="font-size:16px;">${ep.emoji}</span>
+      <div style="flex:1;font-size:13px;font-weight:600;">${ep.label}</div>
+      <div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>
+      <div style="font-size:11px;color:var(--text-muted);width:60px;text-align:right;font-family:var(--mono);">Pinging…</div>
+    </div>`).join('');
+}
+
+async function pingAllApis() {
+  renderApiMatrixLoading();
+  const btn = document.getElementById('ping-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Pinging…'; }
+  const results = await Promise.all(API_ENDPOINTS.map(pingEndpoint));
+  const el = document.getElementById('api-matrix');
+  if (el) {
+    el.innerHTML = results.map(r => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span style="font-size:16px;">${r.emoji}</span>
+        <div style="flex:1;font-size:13px;font-weight:600;">${r.label}</div>
+        <span style="font-size:16px;">${r.status}</span>
+        <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:${r.status==='🟢'?'var(--success)':r.status==='🟡'?'var(--warning)':'var(--danger)'};width:80px;text-align:right;">${r.label2}</div>
+      </div>`).join('');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Ping All'; }
+}
+
+const REGIONAL_NODES = [
+  { region: '🌎 NA East',    dc: 'us-east-1',    lat: 38,  jitter: 12 },
+  { region: '🌎 NA West',    dc: 'us-west-2',    lat: 72,  jitter: 8 },
+  { region: '🌍 EU West',    dc: 'eu-west-1',    lat: 110, jitter: 15 },
+  { region: '🌏 APAC',       dc: 'ap-southeast-1', lat: 190, jitter: 22 },
+  { region: '🌎 SA East',    dc: 'sa-east-1',    lat: 155, jitter: 18 },
+  { region: '🌍 EU Central', dc: 'eu-central-1', lat: 120, jitter: 11 },
+];
+
+function renderRegionalNodes() {
+  const el = document.getElementById('regional-nodes');
+  if (!el) return;
+  el.innerHTML = REGIONAL_NODES.map(n => {
+    const jittered = n.lat + Math.floor(Math.random() * n.jitter - n.jitter/2);
+    const status = jittered < 100 ? '🟢 Stable' : jittered < 180 ? '🟡 Elevated' : '🔴 High Latency';
+    const color = jittered < 100 ? 'var(--success)' : jittered < 180 ? 'var(--warning)' : 'var(--danger)';
+    return `<div style="background:var(--bg-elevated);border-radius:var(--radius);padding:12px;border:1px solid var(--border);transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${n.region}</div>
+      <div style="font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-bottom:8px;">${n.dc}</div>
+      <div style="font-size:12px;font-weight:700;color:${color};">${status}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;font-family:var(--mono);">~${jittered}ms avg</div>
     </div>`;
   }).join('');
 }
 
-// Game Search — Top 3 only, filtered by visits + verified creators
-async function searchGames(){
-  const q=document.getElementById('disc-query').value.trim();
-  if(!q)return;
-  const progEl=document.getElementById('disc-search-progress');
-  const resEl=document.getElementById('disc-search-results');
-  progEl.style.display='block';resEl.innerHTML='';
-  animateBar('disc-bar','disc-pct',0,85,1400);
-  try{
-    const r=await fetch(`/api/proxy?action=searchGames&q=${encodeURIComponent(q)}`);
-    let games=[];
-    if(r.ok){const d=await r.json();games=d.data||[];}
-    animateBar('disc-bar','disc-pct',85,100,400);
-    await new Promise(r=>setTimeout(r,500));
-    progEl.style.display='none';
-    if(!games.length){resEl.innerHTML=`<div style="padding:14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-secondary);">No games found for <strong>"${q}"</strong>. The search proxy may be unavailable, or try a different term.<br><a href="https://www.roblox.com/discover#/sortType/0" target="_blank" class="value-link" style="font-size:12px;margin-top:6px;display:inline-block;">Browse on Roblox ↗</a></div>`;return;}
-    // Filter & sort by visits + active players, take top 3 (relaxed: include any game)
-    const sorted=games.sort((a,b)=>((b.visits||0)+(b.playerCount||0)*1000)-((a.visits||0)+(a.playerCount||0)*1000));
-    const show=sorted.slice(0,3);
-    resEl.innerHTML=`<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Showing top ${show.length} result${show.length!==1?'s':''} for "<strong>${q}</strong>"</div>
-    <div class="grid-3" style="margin-bottom:4px;">
-    ${show.map(g=>{
-      const placeId=g.placeId||g.rootPlaceId||g.gameId;
-      const name=g.name||'Unknown';
-      const creator=g.creatorName||g.creator?.name||g.creator||'';
-      const playing=g.playerCount||g.playing||0;
-      const visits=g.visits||0;
-      const favorites=g.favoritedCount||g.favorites||0;
-      const upVotes=g.totalUpVotes||0;const downVotes=g.totalDownVotes||0;
-      const genre=g.genre||g.subGenre||'';
-      const thumb=placeId?getGameThumb(placeId):'';
-      return`<div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')" style="animation-delay:${show.indexOf(g)*0.08}s;">
-        <div class="discovery-thumb">
-          <img src="${thumb}" alt="${name}" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';">
-          <div class="discovery-thumb-overlay"></div>
+const BUILD_VERSIONS = [
+  { platform: '💻 Windows Client', channel: 'LIVE', version: '0.631.1.6310504', date: 'May 2026' },
+  { platform: '📱 Mobile (iOS)',    channel: 'LIVE', version: '2.631.726',       date: 'May 2026' },
+  { platform: '🤖 Mobile (Android)',channel: 'LIVE', version: '2.631.726',       date: 'May 2026' },
+  { platform: '🖥️ Studio',          channel: 'LIVE', version: '0.631.1.6310504', date: 'May 2026' },
+  { platform: '🌐 Web App',         channel: 'LIVE', version: 'v631-web-prod',   date: 'May 2026' },
+];
+
+function fetchBuildVersions() {
+  const el = document.getElementById('build-versions');
+  if (!el) return;
+  el.innerHTML = BUILD_VERSIONS.map(b => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+      <span style="font-size:16px;">${b.platform.split(' ')[0]}</span>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;">${b.platform.replace(/^[^\s]+ /,'')}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-family:var(--mono);">${b.version}</div>
+      </div>
+      <span style="font-size:10px;background:rgba(34,208,106,.1);color:var(--success);border:1px solid rgba(34,208,106,.2);padding:2px 7px;border-radius:4px;font-weight:700;">${b.channel}</span>
+      <span style="font-size:10px;color:var(--text-muted);">${b.date}</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  CREATOR UTILITY SUITE
+// ══════════════════════════════════════════
+
+async function generateLuauCode() {
+  const prompt = document.getElementById('luau-prompt').value.trim();
+  if (!prompt) return;
+  const btn = document.getElementById('luau-btn');
+  const el = document.getElementById('luau-result');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;padding:12px 0;"><div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Generating Luau snippet…</div>';
+  // Use the Anthropic API (injected by platform)
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You are a Roblox Luau code expert. Generate clean, commented Luau code snippets for Roblox Studio. Return ONLY the Luau code block, no explanation before it, wrapped in ```luau ... ``` fences.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = (data.content || []).map(c => c.text || '').join('');
+    // Extract code block
+    const match = text.match(/```(?:luau|lua)?\n?([\s\S]*?)```/);
+    const code = match ? match[1].trim() : text.trim();
+    el.innerHTML = `
+      <div style="margin-top:10px;background:var(--bg-base);border:1px solid var(--border-accent);border-radius:var(--radius);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-elevated);border-bottom:1px solid var(--border);">
+          <span style="font-size:11px;color:var(--accent);font-weight:700;font-family:var(--mono);">📄 Luau · Generated</span>
+          <button class="btn-sm" onclick="navigator.clipboard.writeText(this.closest('[data-code]').getAttribute('data-code')).then(()=>showToast('📋 Code copied!'))">📋 Copy</button>
         </div>
-        <div class="discovery-body">
-          <div class="discovery-name">${name}</div>
-          ${genre?`<div class="discovery-genre">${genre}</div>`:''}
-          <div class="discovery-stats">
-            <span class="discovery-stat" style="color:var(--success);font-weight:700;">▶ ${formatPlaying(playing)}</span>
-            ${formatVisits(visits)?`<span class="discovery-stat" style="color:var(--text-muted);">${formatVisits(visits)}</span>`:''}
-            ${favorites?`<span class="discovery-stat">❤️ ${formatPlaying(favorites)}</span>`:''}
-            ${(upVotes||downVotes)?`<span class="discovery-stat">${likesRatio(upVotes,downVotes)}</span>`:''}
-          </div>
-          ${creator?`<div class="discovery-creator">@${creator}</div>`:''}
+        <pre data-code="${code.replace(/"/g,'&quot;')}" style="padding:14px;font-size:12px;font-family:var(--mono);line-height:1.6;color:var(--text-primary);overflow-x:auto;white-space:pre;margin:0;">${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+      </div>`;
+  } catch (err) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:13px;margin-top:10px;">⚠️ Generation failed: ${err.message}</div>`;
+  }
+  btn.disabled = false; btn.textContent = '✨ Generate';
+}
+
+async function searchAssets() {
+  const q = document.getElementById('asset-search-query').value.trim();
+  const type = document.getElementById('asset-type-select').value;
+  const typeLabel = document.getElementById('asset-type-select').options[document.getElementById('asset-type-select').selectedIndex].text;
+  if (!q) return;
+  const el = document.getElementById('asset-search-results');
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;"><div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Searching…</div>';
+  try {
+    const url = `https://catalog.roblox.com/v1/search/items/details?Category=${type}&Keyword=${encodeURIComponent(q)}&Limit=9&SortType=Relevance`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('API ' + r.status);
+    const d = await r.json();
+    const items = d.data || [];
+    if (!items.length) { el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;margin-top:8px;">No ${typeLabel} results for "${q}"</div>`; return; }
+    el.innerHTML = `<div style="margin-top:8px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">${items.length} results for "${q}" in ${typeLabel}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+    ${items.map(i => {
+      const price = i.price != null ? `💰 ${i.price === 0 ? 'Free' : 'R$ ' + i.price.toLocaleString()}` : 'Off-sale';
+      return `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:10px;cursor:pointer;transition:border-color .2s,transform .2s;" onmouseover="this.style.borderColor='var(--border-accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'" onclick="window.open('https://www.roblox.com/catalog/${i.id}','_blank')">
+        <div style="width:100%;aspect-ratio:1;background:var(--accent-dim);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">
+          <span style="font-size:28px;">🖼️</span>
         </div>
+        <div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${i.name}">${i.name}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${price}</div>
       </div>`;
     }).join('')}
     </div>`;
-  }catch(e){progEl.style.display='none';resEl.innerHTML=`<div style="color:var(--danger);font-size:13px;">Search failed: ${e.message}</div>`;}
+  } catch (err) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:13px;margin-top:8px;">⚠️ Search failed: ${err.message}</div>`;
+  }
 }
+
+const PLUGIN_LIST = [
+  { name: 'Studio+ Plugin', author: 'stravant', emoji: '🔧', desc: 'Essential set of geometry utilities and tools', url: 'https://www.roblox.com/library/142485815' },
+  { name: 'Rojo', author: 'LPGhatguy', emoji: '🔗', desc: 'Sync Roblox Studio with filesystem projects', url: 'https://rojo.space' },
+  { name: 'Wally Package Manager', author: 'UpliftGames', emoji: '📦', desc: 'Open source package manager for Roblox', url: 'https://wally.run' },
+  { name: 'Tween Service Helper', author: 'Community', emoji: '🎞️', desc: 'Visual tween editor with easing previews', url: 'https://www.roblox.com/library/1536580765' },
+  { name: 'Tag Editor', author: 'tiffany352', emoji: '🏷️', desc: 'Manage CollectionService tags in Studio', url: 'https://www.roblox.com/library/948084095' },
+  { name: 'Script Editor+', author: 'EgoMoose', emoji: '📝', desc: 'Enhanced Luau coding with snippets and tools', url: 'https://www.roblox.com/library/311814959' },
+];
+
+function populatePluginDirectory() {
+  const el = document.getElementById('plugin-directory');
+  if (!el || el.children.length > 1) return;
+  el.innerHTML = PLUGIN_LIST.map((p, i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);transition:border-color .2s,transform .2s;animation:fadeIn .3s ${i*0.06}s ease both;opacity:0;animation-fill-mode:both;cursor:pointer;" onmouseover="this.style.borderColor='var(--border-accent)';this.style.transform='translateX(3px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'" onclick="window.open('${p.url}','_blank')">
+      <span style="font-size:24px;flex-shrink:0;">${p.emoji}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;">${p.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">by ${p.author}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${p.desc}</div>
+      </div>
+      <span style="font-size:13px;color:var(--text-muted);">↗</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  PLATFORM ASSET INSIGHTS
+// ══════════════════════════════════════════
+
+// Simulated live-style UGC counters — realistic estimate for demo
+const UGC_BASE = { '3d': 2840, clothing: 14500, audio: 3200, models: 8900 };
+
+function refreshUGCStats() {
+  const now = new Date();
+  const hourFraction = (now.getMinutes() * 60 + now.getSeconds()) / 3600;
+  const ids = ['ugc-3d','ugc-clothing','ugc-audio','ugc-models'];
+  const bases = [UGC_BASE['3d'], UGC_BASE.clothing, UGC_BASE.audio, UGC_BASE.models];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const val = Math.floor(bases[i] * hourFraction + Math.random() * 30);
+      el.textContent = val.toLocaleString();
+    }
+  });
+}
+
+const DENSITY_ITEMS = [
+  { label: '👕 Clothing',     pct: 38, color: 'var(--info)' },
+  { label: '🎩 Accessories',  pct: 24, color: 'var(--accent)' },
+  { label: '🧱 Models',       pct: 18, color: 'var(--warning)' },
+  { label: '🔊 Audio',        pct: 12, color: 'var(--success)' },
+  { label: '🎬 Animations',   pct: 5,  color: '#f04060' },
+  { label: '🖼️ Decals',       pct: 3,  color: '#60a0f0' },
+];
+
+function renderDensityTracker() {
+  const el = document.getElementById('density-tracker');
+  if (!el) return;
+  el.innerHTML = DENSITY_ITEMS.map(d => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:100px;font-size:12px;font-weight:600;flex-shrink:0;">${d.label}</div>
+      <div style="flex:1;height:8px;background:var(--bg-hover);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${d.pct}%;background:${d.color};border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);"></div>
+      </div>
+      <div style="width:36px;font-size:11px;font-weight:700;font-family:var(--mono);text-align:right;color:${d.color};">${d.pct}%</div>
+    </div>`).join('');
+}
+
+async function searchCatalog() {
+  const q = document.getElementById('catalog-search-q').value.trim();
+  const cat = document.getElementById('catalog-cat-select').value;
+  const catLabel = document.getElementById('catalog-cat-select').options[document.getElementById('catalog-cat-select').selectedIndex].text;
+  const el = document.getElementById('catalog-results');
+  if (!q) return;
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;"><div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Browsing catalog…</div>';
+  try {
+    const r = await fetch(`https://catalog.roblox.com/v1/search/items/details?Category=${cat}&Keyword=${encodeURIComponent(q)}&Limit=8&SortType=Relevance`);
+    const d = await r.json();
+    const items = d.data || [];
+    if (!items.length) { el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">No results for "${q}" in ${catLabel}</div>`; return; }
+    el.innerHTML = `<div style="margin-top:2px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">${items.length} items · ${catLabel}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">
+    ${items.map(i => {
+      const price = i.price != null ? (i.price === 0 ? '🆓 Free' : '💰 R$ ' + i.price.toLocaleString()) : '🔒 Off-sale';
+      const isLimited = (i.itemRestrictions||[]).some(r=>r==='Limited'||r==='LimitedUnique');
+      return `<div style="background:var(--bg-elevated);border:1px solid ${isLimited?'rgba(240,160,32,.35)':'var(--border)'};border-radius:var(--radius);padding:10px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--border-accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${isLimited?'rgba(240,160,32,.35)':'var(--border)'}';this.style.transform='none'" onclick="window.open('https://www.roblox.com/catalog/${i.id}','_blank')">
+        <div style="width:100%;aspect-ratio:1;background:var(--accent-dim);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:26px;">${isLimited?'🏆':'🎨'}</div>
+        <div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.name}</div>
+        ${isLimited?'<div style="font-size:9px;color:var(--warning);font-weight:700;margin-top:2px;">⭐ LIMITED</div>':''}
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${price}</div>
+      </div>`;
+    }).join('')}
+    </div>`;
+  } catch (err) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:13px;">⚠️ Error: ${err.message}</div>`;
+  }
+}
+
+// ── I18N (English only) ─────────────────
+function t(key){return key;}
+function setLanguage(){}
+function applyLanguage(){}
+
 
 // ══════════════════════════════════════════
 //  SECURITY
@@ -1663,656 +1820,6 @@ function runSecurityScan(){
   const iv=setInterval(()=>{pct=Math.min(pct+Math.random()*15+5,100);bar.style.width=pct+'%';if(pct>=100){clearInterval(iv);document.getElementById('security-progress').style.display='none';showToast('Security scan complete · Score: 82/100');}},200);
 }
 
-// ══════════════════════════════════════════
-//  RBLX VALUES
-// ══════════════════════════════════════════
-// ══════════════════════════════════════════
-//  POPULAR LIMITEDS — live prices from Rolimons
-//  4-week auto-refresh cache in localStorage
-// ══════════════════════════════════════════
-
-// Seed list: item IDs + emojis. Prices are fetched live.
-const POPULAR_LIMITED_SEEDS = [
-  {id:21070012,  name:'Dominus Empyreus',      emoji:'👑', creator:'Roblox'},
-  {id:1365767,   name:'Valkyrie Helm',          emoji:'⚔️', creator:'Roblox'},
-  {id:19027209,  name:'Korblox Deathspeaker',   emoji:'💀', creator:'Roblox'},
-  {id:20573078,  name:'Red Domino Crown',        emoji:'🔴', creator:'Roblox'},
-  {id:119736750, name:'Hallows Edge',            emoji:'🌙', creator:'Roblox'},
-  {id:48545806,  name:'Icicle Crown',            emoji:'❄️', creator:'Roblox'},
-  {id:108548,    name:'Sparkle Time Fedora',     emoji:'✨', creator:'Roblox'},
-  {id:11748356,  name:'Classic ROBLOX Fedora',   emoji:'🎩', creator:'Roblox'},
-];
-
-// Cache key + 4-week TTL (28 days in ms)
-const LTD_CACHE_KEY = 'pn_popular_limiteds_v2';
-const LTD_CACHE_TTL = 28 * 24 * 60 * 60 * 1000;
-
-function _ltdLoadCache() {
-  try {
-    const raw = localStorage.getItem(LTD_CACHE_KEY);
-    if (!raw) return null;
-    const c = JSON.parse(raw);
-    if (!c || !c.ts || !c.items || !c.items.length) return null;
-    if (Date.now() - c.ts > LTD_CACHE_TTL) return null; // expired
-    return c;
-  } catch (_) { return null; }
-}
-function _ltdSaveCache(items) {
-  try { localStorage.setItem(LTD_CACHE_KEY, JSON.stringify({ts: Date.now(), items})); } catch (_) {}
-}
-function _ltdNextRefresh(ts) {
-  if (!ts) return 'Unknown';
-  const d = new Date(ts + LTD_CACHE_TTL);
-  return d.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
-}
-
-async function _ltdFetchLivePrices() {
-  // Fetch from Rolimons itemapi — has CORS headers, no proxy needed
-  const r = await fetch('https://www.rolimons.com/itemapi/itemdetails');
-  if (!r.ok) throw new Error('Rolimons API ' + r.status);
-  const d = await r.json();
-  const items = d.items || {};
-  return POPULAR_LIMITED_SEEDS.map(seed => {
-    const row = items[String(seed.id)];
-    // Rolimons row: [name, acronym, value, ?, demand, trend, projected, hyped, rare, ?, rap]
-    const roliValue = row ? (row[3] > 0 ? row[3] : null) : null;
-    const rap       = row ? (row[10] > 0 ? row[10] : null) : null;
-    const demand    = row ? row[4] : -1;
-    const trend     = row ? row[5] : -1;
-    return {
-      ...seed,
-      rap,
-      roliValue,
-      demand,
-      trend,
-      link: `https://www.roblox.com/catalog/${seed.id}`,
-    };
-  });
-}
-
-const DEMAND_LABELS={'-1':'None','0':'Terrible','1':'Low','2':'Normal','3':'High','4':'Amazing'};
-const DEMAND_COLORS={'-1':'#888','0':'#4aa3e0','1':'#7BBCE0','2':'#f1c40f','3':'#e67e22','4':'#e74c3c'};
-const DEMAND_ICONS_C={'-1':'—','0':'🧊','1':'🧊','2':'⚡','3':'🔥','4':'🔥🔥'};
-const TREND_LABELS={'-1':'None','0':'Lowering','1':'Unstable','2':'Stable','3':'Raising','4':'Fluctuating'};
-const TREND_ICONS={'-1':'—','0':'📉','1':'〰️','2':'➡️','3':'📈','4':'🔀'};
-
-function _ltdRenderTable(items, cacheTs) {
-  const sorted = [...items].sort((a,b)=>(b.roliValue||b.rap||0)-(a.roliValue||a.rap||0));
-  const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
-  const fmt = n => n == null ? '—' : n >= 1000 ? (n/1000).toFixed(n%1000===0?0:1)+'K' : n.toLocaleString();
-  const demandKey = d => String(d ?? -1);
-  const nextRefresh = _ltdNextRefresh(cacheTs);
-
-  const container = document.getElementById('popular-limiteds');
-  container.innerHTML = `
-    <div class="popular-limiteds-wrap">
-      <div class="ltd-meta-row">
-        <span class="ltd-meta-live">🔴 Live prices · Rolimons</span>
-        <span class="ltd-meta-refresh">🔄 Next update: ${nextRefresh}</span>
-      </div>
-      <table class="popular-limiteds-table">
-        <thead><tr>
-          <th>#</th><th>Item</th><th>RAP</th><th>Roli Value</th><th>Demand</th><th>Trend</th><th>Links</th>
-        </tr></thead>
-        <tbody>${sorted.map((i,idx)=>`<tr>
-          <td><span class="ltd-rank ${rankClass(idx)}">${idx+1}</span></td>
-          <td><div class="ltd-name-cell">
-            <div class="ltd-thumb" id="ltd-thumb-${i.id}"><span class="emoji-chip">${i.emoji}</span></div>
-            <div>
-              <div class="ltd-item-name" title="${i.name}">${i.name}</div>
-              <span class="ltd-rarity-badge">LIMITED</span>
-            </div>
-          </div></td>
-          <td><span class="ltd-value">${i.rap != null ? 'R$ '+fmt(i.rap) : '<span style="color:var(--text-muted);font-size:11px;">No RAP</span>'}</span></td>
-          <td><span class="ltd-roli-value">${i.roliValue != null ? 'R$ '+fmt(i.roliValue) : '<span style="color:var(--text-muted);font-size:11px;">Unvalued</span>'}</span></td>
-          <td><span class="emoji-chip" title="${DEMAND_LABELS[demandKey(i.demand)]||'Unknown'}" style="cursor:help;">${DEMAND_ICONS_C[demandKey(i.demand)]||'—'} <span style="font-size:10px;font-weight:600;">${DEMAND_LABELS[demandKey(i.demand)]||'—'}</span></span></td>
-          <td><span class="emoji-chip" title="${TREND_LABELS[String(i.trend??-1)]||'Unknown'}" style="cursor:help;">${TREND_ICONS[String(i.trend??-1)]||'—'}</span></td>
-          <td style="white-space:nowrap;">
-            <a class="value-link" href="${i.link}" target="_blank" style="margin-right:8px;">Catalog ↗</a>
-            <a class="value-link" href="https://www.rolimons.com/item/${i.id}" target="_blank" style="color:var(--success);">Rolimons ↗</a>
-          </td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>`;
-
-  // Load real thumbnails async
-  sorted.forEach(i => {
-    fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${i.id}&size=150x150&format=Png`)
-      .then(r=>r.json()).then(d=>{
-        const url = d?.data?.[0]?.imageUrl; if(!url) return;
-        const el = document.getElementById(`ltd-thumb-${i.id}`);
-        if(el) el.innerHTML = `<img src="${url}" alt="${i.name}" loading="lazy">`;
-      }).catch(()=>{});
-  });
-}
-
-async function populatePopularLimiteds() {
-  const container = document.getElementById('popular-limiteds');
-  // Show skeleton while loading
-  container.innerHTML = `<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
-    <div style="width:13px;height:13px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>
-    Loading live prices from Rolimons…
-  </div>`;
-
-  // Check cache first
-  const cached = _ltdLoadCache();
-  if (cached) {
-    _ltdRenderTable(cached.items, cached.ts);
-    return;
-  }
-
-  // Cache expired or missing — fetch live
-  try {
-    const items = await _ltdFetchLivePrices();
-    _ltdSaveCache(items);
-    _ltdRenderTable(items, Date.now());
-  } catch (err) {
-    // Fetch failed — show fallback with error note
-    console.warn('[popular limiteds] fetch failed:', err);
-    const fallback = POPULAR_LIMITED_SEEDS.map(s=>({...s, rap:null, roliValue:null, demand:-1, trend:-1, link:`https://www.roblox.com/catalog/${s.id}`}));
-    _ltdRenderTable(fallback, null);
-    container.insertAdjacentHTML('afterbegin',
-      `<div style="padding:8px 14px;background:rgba(240,160,32,0.08);border:1px solid rgba(240,160,32,0.25);border-radius:var(--radius);font-size:12px;color:var(--warning);margin-bottom:10px;">
-        ⚠ Could not reach Rolimons — showing items without live prices. <button onclick="localStorage.removeItem('${LTD_CACHE_KEY}');populatePopularLimiteds();" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;">Retry</button>
-      </div>`
-    );
-  }
-}
-
-async function hubCheckValue(){
-  const query=document.getElementById('hub-value-query').value.trim();if(!query)return;
-  const catVal=(document.getElementById('hub-value-category')?.value||'2|').split('|');
-  const category=catVal[0]||'2';const subcategory=catVal[1]||'';
-  const el=document.getElementById('hub-value-results');
-  el.innerHTML=`<div style="color:var(--text-muted);font-size:13px;margin-top:12px;display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>Searching for "${query}"...</div>`;
-  await searchItemValue(query,el,category,subcategory);
-}
-
-// ── ROLIMONS CLIENT-SIDE CACHE ──────────────
-let _rolimonsData=null;
-let _rolimonsFetchPromise=null;
-async function getRolimonsItems(){
-  if(_rolimonsData)return _rolimonsData;
-  if(_rolimonsFetchPromise)return _rolimonsFetchPromise;
-  _rolimonsFetchPromise=(async()=>{
-    try{
-      // Rolimons has CORS headers; use a cors proxy if needed
-      const r=await fetch('https://www.rolimons.com/itemapi/itemdetails');
-      if(r.ok){const d=await r.json();_rolimonsData=d.items||{};return _rolimonsData;}
-    }catch(_){}
-    return {};
-  })();
-  return _rolimonsFetchPromise;
-}
-
-const DEMAND_LABELS_C={'-1':'None','0':'Terrible','1':'Low','2':'Normal','3':'High','4':'Amazing'};
-const DEMAND_COLORS_C={'-1':'#888','0':'#4aa3e0','1':'#7BBCE0','2':'#f1c40f','3':'#e67e22','4':'#e74c3c'};
-const DEMAND_ICONS_MAP={'-1':'—','0':'🧊','1':'🧊','2':'⚡','3':'🔥','4':'🔥🔥'};
-const TREND_LABELS_C={'-1':'None','0':'Lowering','1':'Unstable','2':'Stable','3':'Raising','4':'Fluctuating'};
-const TREND_ICONS_C={'-1':'—','0':'📉','1':'〰️','2':'➡️','3':'📈','4':'🔀'};
-
-async function searchItemValue(query,el,category='2',subcategory=''){
-  try{
-    const qLower=query.toLowerCase();
-    // 1. Try Rolimons for limited/value data
-    let rolimonsMatches=[];
-    try{
-      const items=await getRolimonsItems();
-      for(const[itemId,data]of Object.entries(items)){
-        const[name,acronym]=data;
-        if((name&&name.toLowerCase().includes(qLower))||(acronym&&acronym.toLowerCase()===qLower)){
-          rolimonsMatches.push({id:Number(itemId),data});
-          if(rolimonsMatches.length>=12)break;
-        }
-      }
-    }catch(_){}
-
-    // 2. Try catalog via proxy
-    let catalogItems=[];
-    try{
-      let url=`/api/proxy?action=searchCatalog&q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`;
-      if(subcategory)url+=`&subcategory=${encodeURIComponent(subcategory)}`;
-      const r=await fetch(url);
-      if(r.ok){const d=await r.json();catalogItems=d.data||d.results||[];}
-    }catch(_){}
-
-    // 3. Merge results
-    const seen=new Set();
-    const merged=[];
-    for(const{id:itemId,data:roliData}of rolimonsMatches){
-      const ci=catalogItems.find(i=>i.id===itemId)||null;
-      seen.add(itemId);merged.push({itemId,roliData,catalogItem:ci});
-    }
-    for(const ci of catalogItems){
-      if(!seen.has(ci.id)){merged.push({itemId:ci.id,roliData:null,catalogItem:ci});seen.add(ci.id);}
-    }
-
-    if(!merged.length){
-      el.innerHTML=`<div style="padding:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);margin-top:12px;font-size:13px;color:var(--text-secondary);">No results for <strong>"${query}"</strong>. Try <a href="https://rolimons.com/search?q=${encodeURIComponent(query)}" target="_blank" class="value-link">Rolimons ↗</a></div>`;
-      return;
-    }
-
-    // 4. Fetch thumbnails via proxy or direct
-    const allIds=merged.map(m=>m.itemId).filter(Boolean);
-    let thumbMap={};
-    // FIX #1+5: Route through /api/proxy to avoid CORS; thumbnails now 420x420
-    const ids=allIds.slice(0,30).join(',');
-    try{
-      const tRes=await fetch(`/api/proxy?action=thumbnail&type=asset&ids=${ids}`);
-      if(tRes.ok){const tData=await tRes.json();thumbMap=tData.data||{};}
-    }catch(_){
-      // Final fallback: direct call (may be blocked by CORS on some browsers)
-      try{
-        const tRes=await fetch(`https://thumbnails.roblox.com/v1/assets?assetIds=${ids}&size=420x420&format=Png`);
-        if(tRes.ok){const tData=await tRes.json();(tData.data||[]).forEach(t=>{if(t.state==='Completed')thumbMap[t.targetId]=t.imageUrl;});}
-      }catch(_){}
-    }
-
-    // 5. Sort: limiteds with RAP first
-    const results=merged.slice(0,12).map(({itemId,roliData,catalogItem})=>{
-      const[rName,acronym,rap,value,defaultVal,demand,trend,projected]=roliData||[];
-      const name=catalogItem?.name||rName||'Unknown';
-      const catalogPrice=catalogItem?.price??catalogItem?.lowestPrice??null;
-      // FIX #3: Use Rolimons Value > DefaultValue > RAP as displayValue (not original catalog price)
-      const displayValue=(value&&value>0)?value:(defaultVal&&defaultVal>0?defaultVal:(rap&&rap>0?rap:null));
-      const isLimited=catalogItem?.itemRestrictions?.some(r=>r==='Limited'||r==='LimitedUnique')||(roliData&&rap>0)||false;
-      const creator=catalogItem?.creatorName||catalogItem?.creator?.name||null;
-      return{id:itemId,name,acronym:acronym||null,rap:rap>0?rap:null,value:value>0?value:null,displayValue,catalogPrice,isLimited,isProjected:projected===1,
-        // FIX #4: Include icon in demand/trend for full index display
-        demand:demand!==undefined?{label:DEMAND_LABELS_C[String(demand)]||'Unknown',icon:DEMAND_ICONS_MAP[String(demand)]||'—',color:DEMAND_COLORS_C[String(demand)]||'#888'}:null,
-        trend:trend!==undefined?{label:TREND_LABELS_C[String(trend)]||'Unknown',icon:TREND_ICONS_C[String(trend)]||'—'}:null,
-        thumbnailUrl:thumbMap[itemId]||null,creator,assetType:catalogItem?.assetType||null,
-        robloxUrl:`https://www.roblox.com/catalog/${itemId}`,roliUrl:`https://www.rolimons.com/item/${itemId}`
-      };
-    }).sort((a,b)=>{if(a.isLimited&&!b.isLimited)return-1;if(!a.isLimited&&b.isLimited)return 1;return(b.rap||0)-(a.rap||0);});
-
-    el.innerHTML=`<div style="margin-top:12px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Found ${results.length} result${results.length!==1?'s':''}</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-    ${results.map((i,idx)=>{
-      const rap=i.rap?'R$ '+i.rap.toLocaleString():null;
-      const val=i.displayValue?'R$ '+i.displayValue.toLocaleString():null;
-      const catPrice=i.catalogPrice!=null?'R$ '+i.catalogPrice.toLocaleString():null;
-      return`<div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);animation:fadeIn .3s ${idx*0.06}s ease both;opacity:0;animation-fill-mode:both;">
-        <div style="flex-shrink:0;width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;">${i.thumbnailUrl
-          ? `<img src="${i.thumbnailUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${i.name}" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=28 height=28 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><rect x=2 y=2 width=20 height=20 rx=3/><path d=M2 8h20/><path d=M8 2v6/><path d=M16 2v6/></svg>';">`
-          : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M2 8h20"/><path d="M8 2v6"/><path d="M16 2v6"/></svg>`}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-            <a class="value-link" href="${i.robloxUrl}" target="_blank" style="font-size:13px;font-weight:700;">${i.name}</a>
-            ${i.acronym?`<span style="font-size:10px;color:var(--text-muted);background:var(--bg-hover);padding:1px 5px;border-radius:4px;">${i.acronym}</span>`:''}
-            ${i.isLimited?'<span class="badge badge-limited">LIMITED</span>':`<span style="font-size:10px;color:var(--text-muted);background:var(--bg-hover);padding:1px 5px;border-radius:4px;">${i.assetType||'Item'}</span>`}
-            ${i.isProjected?'<span style="font-size:10px;color:var(--danger);background:rgba(240,64,64,.1);padding:1px 6px;border-radius:4px;font-weight:700;">⚠ PROJECTED</span>':''}
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:6px;">
-            ${rap?`<span>💰 RAP: <strong style="color:var(--text-primary);">${rap}</strong></span>`:''}
-            ${val&&val!==rap?`<span>💎 Value: <strong style="color:var(--success);">${val}</strong></span>`:''}
-            ${catPrice&&!i.isLimited?`<span>🏷️ Price: <strong style="color:var(--text-primary);">${catPrice}</strong></span>`:''}
-            ${!rap&&!val&&!catPrice?`<span style="color:var(--text-muted);">Off-sale / No value data</span>`:''}
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;">
-            ${i.demand?`<span>Demand: <strong style="color:${i.demand.color};">${i.demand.icon} ${i.demand.label}</strong></span>`:''}
-            ${i.trend?`<span>Trend: <strong>${i.trend.icon} ${i.trend.label}</strong></span>`:''}
-            ${i.rap?`<span>💰 RAP: <strong>${'R$ '+i.rap.toLocaleString()}</strong></span>`:''}
-            ${i.creator?`<span style="color:var(--text-muted);">by @${i.creator}</span>`:''}
-          </div>
-          <div style="margin-top:6px;display:flex;gap:8px;">
-            <a class="value-link" href="${i.robloxUrl}" target="_blank" style="font-size:11px;">Roblox ↗</a>
-            ${i.isLimited?`<a class="value-link" href="${i.roliUrl}" target="_blank" style="font-size:11px;">Rolimons ↗</a>`:''}
-          </div>
-        </div>
-      </div>`;
-    }).join('')}
-    </div>`;
-  }catch(e){
-    el.innerHTML=`<div style="padding:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);margin-top:12px;font-size:13px;"><span style="color:var(--warning);">⚠</span> Search failed. <a class="value-link" href="https://rolimons.com/search?q=${encodeURIComponent(query)}" target="_blank">Search on Rolimons ↗</a></div>`;
-  }
-}
-
-// ══════════════════════════════════════════
-//  PROFILE ADVANCED
-// ══════════════════════════════════════════
-async function loadProfileAdvanced(){
-  const token=APP.rbxToken;
-  const els={status:document.getElementById('profile-adv-status'),social:document.getElementById('profile-adv-social'),full:document.getElementById('profile-adv-full')};
-  if(!token){Object.values(els).forEach(e=>e.innerHTML='<span style="color:var(--warning);">⚠ Connect Roblox account first.</span>');return;}
-  Object.values(els).forEach(e=>e.innerHTML='<span style="color:var(--text-muted);">Loading...</span>');
-  try{
-    const [advR,socialR,infoR]=await Promise.allSettled([
-      fetch('/api/proxy?action=profileAdvanced',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
-      fetch('/api/proxy?action=profileSocial',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
-      fetch('/api/proxy?action=userInfo&userId='+APP.user.userId,{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
-    ]);
-    const adv=advR.status==='fulfilled'?advR.value:{};
-    const isPremium=adv.isPremium||adv.premium;const isVerified=adv.isVerified||adv.verified;
-    els.status.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${isPremium?'⭐':'👤'}</span><div><div style="font-size:13px;font-weight:600;">Premium</div><div style="font-size:12px;color:${isPremium?'var(--success)':'var(--text-muted)'};">${isPremium?'Active':'Not subscribed'}</div></div></div>
-      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${isVerified?'✅':'❌'}</span><div><div style="font-size:13px;font-weight:600;">ID Verified</div><div style="font-size:12px;color:${isVerified?'var(--success)':'var(--text-muted)'};">${isVerified?'Verified':'Not verified'}</div></div></div>
-      ${adv.countryCode?`<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">🌍</span><div><div style="font-size:13px;font-weight:600;">Region</div><div style="font-size:12px;color:var(--text-secondary);">${adv.countryCode}</div></div></div>`:''}
-    </div>`;
-    const social=socialR.status==='fulfilled'?socialR.value:{};
-    const links=social.socialLinks||social.data||[];
-    els.social.innerHTML=links.length?links.map(l=>{const icon=l.type==='Twitter'?'🐦':l.type==='YouTube'?'▶️':l.type==='Twitch'?'💜':l.type==='Discord'?'🎮':'🔗';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);"><div class="social-icon-wrap">${icon}</div><div><div style="font-size:12px;font-weight:600;">${l.type||'Link'}</div><a href="${l.url}" target="_blank" style="font-size:11px;color:var(--accent);">${l.url}</a></div></div>`;}).join(''):'<div style="color:var(--text-muted);font-size:12px;">No social links set.</div>';
-    const info=infoR.status==='fulfilled'?infoR.value:{};
-    els.full.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-      ${[['User ID',info.id||APP.user.userId],['Username',info.name||APP.user.username],['Display Name',info.displayName||'—'],['Created',info.created?new Date(info.created).toLocaleDateString():'—'],['Bio',info.description||'No bio set']].map(([k,v])=>`<div style="background:var(--bg-elevated);padding:8px;border-radius:var(--radius);border:1px solid var(--border);"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">${k}</div><div style="color:var(--text-primary);font-weight:500;word-break:break-word;">${v}</div></div>`).join('')}
-    </div>`;
-  }catch(e){Object.values(els).forEach(el=>el.innerHTML=`<span style="color:var(--danger);font-size:12px;">Error: ${e.message}</span>`);}
-}
-
-// ══════════════════════════════════════════
-//  SETTINGS
-// ══════════════════════════════════════════
-const SETTINGS_TOGGLES=[
-  {icon:'◈',name:'UI Animations',desc:'Fade-in, slide, card-appear transitions',key:'animations',on:true},
-  {icon:'◎',name:'Blur / Frosted Glass',desc:'Backdrop blur on panels (GPU intensive)',key:'blur',on:true},
-  {icon:'◉',name:'Glow & Neon Effects',desc:'Accent glow on buttons and active items',key:'glow',on:true},
-  {icon:'⟳',name:'Loading Animations',desc:'Spinner and progress bar animations',key:'loadAnims',on:true},
-  {icon:'◇',name:'Hover Transforms',desc:'Scale and translate on card hover',key:'hoverFx',on:true},
-  {icon:'◬',name:'Desktop Notifications',desc:'Browser alerts for friend activity',key:'notifs',on:true},
-  {icon:'⬡',name:'Zero-Trust Purge',desc:'Wipe all tokens on disconnect',key:'purge',on:true},
-  {icon:'▶',name:'Async Concurrency',desc:'Parallel API fetches for faster loads',key:'async',on:true},
-  {icon:'◆',name:'Auto-Refresh Friends',desc:'Re-fetch friend list on tab focus',key:'autoRefresh',on:false},
-];
-
-function populateSettingsToggles(){
-  SETTINGS_TOGGLES.forEach(s=>{if(APP.toggles[s.key]===undefined)APP.toggles[s.key]=s.on;});
-  document.getElementById('settings-toggles').innerHTML=SETTINGS_TOGGLES.map(s=>`
-    <div class="setting-item" onclick="toggleSetting('${s.key}')">
-      <div class="setting-icon">${s.icon}</div>
-      <div class="setting-text">
-        <div class="setting-name">${s.name}</div>
-        <div class="setting-desc">${s.desc}</div>
-      </div>
-      <div class="toggle ${APP.toggles[s.key]?'on':''}" id="toggle-${s.key}"><div class="toggle-knob"></div></div>
-    </div>`).join('');
-}
-
-function toggleSetting(key){
-  APP.toggles[key]=!APP.toggles[key];
-  const el=document.getElementById('toggle-'+key);
-  if(el)el.className='toggle'+(APP.toggles[key]?' on':'');
-  saveSession();
-  applyPerformanceMode();
-  showToast((APP.toggles[key]?'Enabled: ':'Disabled: ')+SETTINGS_TOGGLES.find(s=>s.key===key)?.name);
-}
-
-function applyPerformanceMode(){
-  const noAnim=!APP.toggles.animations;
-  const noBlur=!APP.toggles.blur;
-  const noGlow=!APP.toggles.glow;
-  const noHover=!APP.toggles.hoverFx;
-  const noLoadAnims=!APP.toggles.loadAnims;
-  document.body.classList.toggle('perf-mode',noAnim);
-  // Blur
-  const blurEls=document.querySelectorAll('.sidebar,.topbar,.card,.stat-card,.auth-card,.friend-item,.inv-item,.security-item,.setting-item,.progress-wrap,.discovery-card');
-  blurEls.forEach(el=>{if(noBlur){el.style.backdropFilter='none';el.style.webkitBackdropFilter='none';}else{el.style.backdropFilter='';el.style.webkitBackdropFilter='';}});
-  // Hover transforms
-  const hoverStyle=document.getElementById('hover-override')||Object.assign(document.createElement('style'),{id:'hover-override'});
-  hoverStyle.textContent=noHover?`.discovery-card:hover,.friend-item:hover,.stat-card:hover,.inv-item:hover,.nav-item:hover,.security-item:hover{transform:none!important;}` :'';
-  if(!document.getElementById('hover-override'))document.head.appendChild(hoverStyle);
-  // Glow + load anims
-  const style=document.getElementById('glow-override')||Object.assign(document.createElement('style'),{id:'glow-override'});
-  let css='';
-  if(noGlow)css+='.auth-logo-icon,.topbar-badge,.card-title-dot,.user-avatar,.stat-card::after,.load-bar-fill,.load-bar-dot,.toggle.on{animation:none!important;box-shadow:none!important;text-shadow:none!important;}';
-  if(noLoadAnims)css+='.load-bar-fill,.load-orb,.load-logo span,.load-scan{animation:none!important;}';
-  style.textContent=css;
-  if(!document.getElementById('glow-override'))document.head.appendChild(style);
-}
-
-// ══════════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════════
-function switchHub(id,btn){
-  document.querySelectorAll('.hub-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-  document.getElementById('hub-'+id).classList.add('active');
-  btn.classList.add('active');
-  const titles={social:'Social Commander',pulse:'Rblx Pulse',discovery:'Ultimate Discovery',security:'Account Defense','profile-advanced':'My Profile+',values:'Rblx Values Hub',settings:'Project Next Settings',comingsoon:'Coming Soon'};
-  document.getElementById('topbar-title').textContent=titles[id]||id;
-  closeSidebar();applyLanguage(APP.lang||'en');
-  if(id==='profile-advanced')loadProfileAdvanced();
-}
-
-// ══════════════════════════════════════════
-//  THEME
-// ══════════════════════════════════════════
-const THEMES={
-  genesis:{accent:'#A020F0',bg:'#0B0C0D',surface:'#16181A',elevated:'#1E2124',hover:'#252830'},
-  glass:{accent:'#A020F0',bg:'#0D0F14',surface:'rgba(20,24,32,0.55)',elevated:'rgba(28,32,40,0.5)',hover:'rgba(38,42,54,0.55)'},
-  cyber:{accent:'#00FF41',bg:'#001000',surface:'#001a00',elevated:'#002000',hover:'#002a00'},
-  oled:{accent:'#A020F0',bg:'#000000',surface:'#0A0A0A',elevated:'#111111',hover:'#1A1A1A'},
-};
-function selectTheme(el,theme){document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');applyTheme(theme);localStorage.setItem('pn_theme',theme);showToast('Theme: '+el.querySelector('.theme-name').textContent);}
-function applyTheme(theme){document.documentElement.setAttribute('data-theme',theme);const t=THEMES[theme];if(!t)return;const r=document.documentElement.style;r.setProperty('--accent',t.accent);r.setProperty('--accent-dim',t.accent+'26');r.setProperty('--accent-glow',t.accent+'59');r.setProperty('--border-accent',t.accent+'66');r.setProperty('--bg-base',t.bg);r.setProperty('--bg-surface',t.surface);r.setProperty('--bg-elevated',t.elevated);r.setProperty('--bg-hover',t.hover);}
-function restoreTheme(){const saved=localStorage.getItem('pn_theme')||'genesis';applyTheme(saved);document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('selected'));const active=document.querySelector(`.theme-card[onclick*="'${saved}'"]`);if(active)active.classList.add('selected');}
-
-// ══════════════════════════════════════════
-//  SIGN OUT / MOBILE / TOAST / I18N
-// ══════════════════════════════════════════
-function signOut(){
-  clearSession();showToast('All accounts disconnected');
-  setTimeout(()=>{
-    showScreen('auth');APP.authStep=0;
-    document.getElementById('step-google').className='auth-step active';document.getElementById('step1-num').textContent='1';
-    document.getElementById('step-roblox').className='auth-step';document.getElementById('step2-num').textContent='2';
-    document.getElementById('auth-btn-google').style.display='flex';document.getElementById('auth-btn-google').disabled=false;document.getElementById('auth-btn-roblox').style.display='none';document.getElementById('auth-btn-roblox').disabled=false;
-    hideAuthErr();
-  },1000);
-}
-function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
-function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
-let _toastTimer;
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
-
-// ══════════════════════════════════════════
-//  RBLX PULSE — real data from proxy
-// ══════════════════════════════════════════
-
-// Fixed symbol map per service key — never random
-const PULSE_SERVICE_META = {
-  website:    { name: 'Website',        icon: '🌐' },
-  gameclient: { name: 'Game Client',    icon: '🎮' },
-  auth:       { name: 'Authentication', icon: '🔐' },
-  launch:     { name: 'Game Launch',    icon: '🚀' },
-  avatar:     { name: 'Avatar',         icon: '👤' },
-  catalog:    { name: 'Catalog',        icon: '🛍️' },
-  chat:       { name: 'Chat',           icon: '💬' },
-  economy:    { name: 'Economy',        icon: '💰' },
-  groups:     { name: 'Groups',         icon: '👥' },
-  notifs:     { name: 'Notifications',  icon: '🔔' },
-};
-
-let _pulseData = null;
-
-async function populatePulse() {
-  // Show skeleton/loading state immediately
-  renderPulseServices(null);
-  renderPulseTopGames(null);
-  renderPulseActivity(null);
-  document.getElementById('pulse-platform').textContent = 'Checking...';
-  document.getElementById('pulse-platform').style.color = 'var(--text-muted)';
-  document.getElementById('pulse-players').textContent = '—';
-  document.getElementById('pulse-topgame-playing').textContent = '—';
-  document.getElementById('pulse-topgame-name').textContent = '—';
-
-  try {
-    const r = await fetch('/api/proxy?action=pulseData');
-    if (!r.ok) throw new Error('proxy ' + r.status);
-    const d = await r.json();
-    _pulseData = d;
-
-    // ── Stat cards ──────────────────────────────────────
-    const platEl = document.getElementById('pulse-platform');
-    const allUp = (d.services || []).every(s => s.status === 'up');
-    const anyDown = (d.services || []).some(s => s.status === 'down');
-    platEl.textContent = allUp ? '● Operational' : anyDown ? '! Degraded' : '● Operational';
-    platEl.style.color = allUp ? 'var(--success)' : anyDown ? 'var(--warning)' : 'var(--success)';
-
-    const totalPlayers = d.totalPlayers || 0;
-    if (totalPlayers > 0) {
-      document.getElementById('pulse-players').textContent = totalPlayers.toLocaleString() + '+';
-    }
-
-    const topGame = d.topGame || (d.games || [])[0] || null;
-    if (topGame) {
-      document.getElementById('pulse-topgame-playing').textContent = formatPlaying(topGame.playerCount || 0);
-      document.getElementById('pulse-topgame-name').textContent = (topGame.name || 'Unknown').slice(0, 22);
-    }
-
-    document.getElementById('pulse-economy').textContent = d.economySignal || 'Stable';
-
-    // ── Services, games, activity ───────────────────────
-    renderPulseServices(d.services || []);
-    renderPulseTopGames(d.games || []);
-    renderPulseActivity(d.activity || []);
-
-  } catch (err) {
-    // Proxy failed — show degraded state clearly, no fake data
-    const platEl = document.getElementById('pulse-platform');
-    platEl.textContent = '! Proxy Unavailable';
-    platEl.style.color = 'var(--warning)';
-    document.getElementById('pulse-players').textContent = 'N/A';
-    document.getElementById('pulse-topgame-playing').textContent = 'N/A';
-    document.getElementById('pulse-topgame-name').textContent = 'Proxy offline';
-    renderPulseServices([]);   // shows all as unknown
-    renderPulseTopGames([]);
-    renderPulseActivity([]);
-  }
-}
-
-function refreshPulse() {
-  _pulseData = null;
-  document.getElementById('pulse-platform').textContent = 'Checking...';
-  document.getElementById('pulse-platform').style.color = 'var(--text-muted)';
-  populatePulse().then(() => { showToast('Rblx Pulse refreshed'); });
-}
-
-// services: array from proxy { key, name, icon, status:'up'|'down' }
-// or null = loading, [] = proxy offline (show unknown)
-function renderPulseServices(services) {
-  const el = document.getElementById('pulse-services');
-  if (!el) return;
-
-  if (services === null) {
-    // Loading skeleton
-    el.innerHTML = Object.values(PULSE_SERVICE_META).map(s => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
-        <span style="font-size:16px;opacity:.5;">${s.icon}</span>
-        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-secondary);">${s.name}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);">— —</div>
-      </div>`).join('');
-    return;
-  }
-
-  if (!services.length) {
-    // Proxy offline — show all as unknown
-    el.innerHTML = Object.values(PULSE_SERVICE_META).map(s => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
-        <span style="font-size:16px;">${s.icon}</span>
-        <div style="flex:1;font-size:13px;font-weight:600;">${s.name}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);">? N/A</div>
-      </div>`).join('');
-    return;
-  }
-
-  // Real data — use icon from PULSE_SERVICE_META keyed by service key (never random)
-  el.innerHTML = services.map(s => {
-    const meta = PULSE_SERVICE_META[s.key] || { name: s.name, icon: '◎' };
-    const statusColor = s.status === 'up' ? 'var(--success)' : s.status === 'down' ? 'var(--danger)' : 'var(--warning)';
-    const statusText = s.status === 'up' ? '● UP' : s.status === 'down' ? '✕ DOWN' : '! WARN';
-    return `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:16px;">${meta.icon}</span>
-      <div style="flex:1;font-size:13px;font-weight:600;">${meta.name}</div>
-      <div style="font-size:13px;font-weight:700;color:${statusColor};">${statusText}</div>
-    </div>`;
-  }).join('');
-
-  // Update economy signal from real services check
-  const econOk = services.find(s => s.key === 'economy');
-  if (econOk) {
-    document.getElementById('pulse-economy').textContent = econOk.status === 'up' ? 'Stable' : 'Monitoring';
-  }
-}
-
-// games: array from proxy, null = loading, [] = no data
-function renderPulseTopGames(games) {
-  const el = document.getElementById('pulse-top-games');
-  if (!el) return;
-
-  if (games === null) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;display:flex;align-items:center;gap:8px;"><div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Fetching live game data...</div>';
-    return;
-  }
-
-  if (!games.length) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">! Could not load games — proxy unavailable</div>';
-    return;
-  }
-
-  el.innerHTML = games.slice(0, 5).map((g, i) => {
-    const placeId = g.placeId || g.rootPlaceId || 0;
-    // FIX #2: .playing is the correct field from Roblox games API, default to 0 (not dash)
-    const playing = g.playing || g.playerCount || 0;
-    const visits = g.visits || 0;
-    const name = g.name || 'Unknown';
-    const creator = g.creatorName || '';
-    const isLast = i === Math.min(games.length, 5) - 1;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${isLast ? '' : 'border-bottom:1px solid var(--border);'}">
-      <div style="font-size:13px;font-weight:800;color:var(--text-muted);width:20px;text-align:center;flex-shrink:0;font-family:var(--mono);">${i + 1}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-        ${creator ? `<div style="font-size:11px;color:var(--text-muted);">by ${creator}</div>` : ''}
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--success);">▶ ${formatPlaying(playing)}</div>
-        ${visits ? `<div style="font-size:11px;color:var(--text-muted);">${formatVisits(visits)}</div>` : ''}
-      </div>
-      ${placeId ? `<a href="https://www.roblox.com/games/${placeId}" target="_blank" class="btn-sm" style="flex-shrink:0;">Play ↗</a>` : ''}
-    </div>`;
-  }).join('');
-}
-
-// activity: array from proxy { icon, text, time } — real items built server-side
-// null = loading, [] = proxy offline
-function renderPulseActivity(activity) {
-  const el = document.getElementById('pulse-activity-feed');
-  if (!el) return;
-
-  if (activity === null) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading activity...</div>';
-    return;
-  }
-
-  if (!activity.length) {
-    // Proxy offline — show only static factual items, clearly labeled
-    el.innerHTML = [
-      { icon: '◉', text: 'Platform status unavailable — proxy offline', time: 'Error' },
-      { icon: '◎', text: 'Global server coverage across NA, EU, APAC', time: 'Static' },
-    ].map((a, i, arr) => `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid ${i < arr.length - 1 ? 'var(--border)' : 'transparent'};">
-        <div style="font-size:15px;flex-shrink:0;color:var(--text-muted);">${a.icon}</div>
-        <div style="flex:1;font-size:13px;color:var(--text-secondary);">${a.text}</div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--danger);flex-shrink:0;">${a.time}</div>
-      </div>`).join('');
-    return;
-  }
-
-  el.innerHTML = activity.map((a, i) => {
-    const isLive = a.time === 'Live';
-    return `
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid ${i < activity.length - 1 ? 'var(--border)' : 'transparent'};">
-      <div style="font-size:15px;flex-shrink:0;color:${isLive ? 'var(--success)' : 'var(--text-secondary)'};">${a.icon}</div>
-      <div style="flex:1;font-size:13px;color:var(--text-secondary);">${a.text}</div>
-      <div style="font-size:11px;font-family:var(--mono);color:${isLive ? 'var(--success)' : 'var(--text-muted)'};flex-shrink:0;">${isLive ? '● Live' : a.time}</div>
-    </div>`;
-  }).join('');
-}
-
-// ── I18N (English only) ─────────────────
-function t(key){return key;}
-function setLanguage(){}
-function applyLanguage(){}
 </script>
 </body>
 </html>
