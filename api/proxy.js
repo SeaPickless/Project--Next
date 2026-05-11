@@ -123,24 +123,24 @@ const ACTIONS = {
   },
 
   // FOLLOWERS
-  async followers({ userId }, token) {
+  async followers({ userId }) {
     if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Followers API error ' + r.status);
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Followers API error');
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
+    const thumbMap = await fetchThumbs(ids);
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
   // FOLLOWING
-  async following({ userId }, token) {
+  async following({ userId }) {
     if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Following API error ' + r.status);
+    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Following API error');
     const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
+    const thumbMap = await fetchThumbs(ids);
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
@@ -159,37 +159,12 @@ const ACTIONS = {
   },
 
   // PENDING FRIEND REQUESTS
-  async pending({ userId }, token) {
-    // Primary: OAuth-compatible endpoint via Open Cloud (requires Bearer token)
-    // Fallback: legacy endpoint that may work with Bearer on some accounts
-    let users = [];
-    let ok = false;
-
-    // Try the user-facing friends requests endpoint with Bearer auth
-    if (token) {
-      const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100&sortOrder=Desc`, {}, token);
-      if (r.ok) {
-        users = r.data?.data || [];
-        ok = true;
-      }
-    }
-
-    // Fallback: try without auth (public accounts only)
-    if (!ok) {
-      const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100&sortOrder=Desc`);
-      if (r.ok) {
-        users = r.data?.data || [];
-        ok = true;
-      }
-    }
-
-    if (!ok && !users.length) {
-      // Return empty rather than throwing — display will show "no pending" but won't crash
-      return { data: [], note: 'Pending requests require a valid Roblox OAuth token with user.social:read scope.' };
-    }
-
+  async pending({ userId }) {
+    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`);
+    if (!r.ok) throw new Error('Pending API error');
+    const users = r.data?.data || [];
     const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = ids.length ? await fetchThumbs(ids) : {};
+    const thumbMap = await fetchThumbs(ids);
     return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
   },
 
@@ -241,15 +216,29 @@ const ACTIONS = {
     return { data: badges.map(b => ({ ...b, thumbnailUrl: thumbMap[b.id] || b.displayIconImageId ? `https://www.roblox.com/asset-thumbnail/image?assetId=${b.displayIconImageId}&width=64&height=64&format=png` : '' })) };
   },
 
-  // MY ASSETS (legacy-asset:manage)
+  // MY ASSETS (asset:read scope)
   async myAssets({ assetType = 'Model' }, token) {
     if (!token) throw new Error('Authentication required');
-    const r = await rbx(`https://develop.roblox.com/v1/user/assets?assetType=${encodeURIComponent(assetType)}&limit=50&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Could not load assets: ' + r.status);
-    const assets = r.data?.data || [];
-    const ids = assets.map(a => a.id).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids, 'asset');
-    return { data: assets.map(a => ({ ...a, thumbnailUrl: thumbMap[a.id] || '' })) };
+    // Map UI type names to Roblox assetType numeric IDs for Open Cloud
+    const typeMap = { Model:10, Plugin:38, Decal:13, Audio:3, Image:1, Animation:24, MeshPart:40, Plugins:38 };
+    const typeId = typeMap[assetType] || 10;
+    // Try Open Cloud assets API
+    const r = await rbx(`https://apis.roblox.com/assets/v1/assets?assetType=${typeId}&limit=50`, {}, token);
+    if (r.ok && (r.data?.assets||r.data?.data)) {
+      const assets = r.data?.assets || r.data?.data || [];
+      const ids = assets.map(a => a.assetId||a.id).filter(Boolean);
+      const thumbMap = ids.length ? await fetchThumbs(ids, 'asset') : {};
+      return { data: assets.map(a => ({ ...a, id: a.assetId||a.id, thumbnailUrl: thumbMap[a.assetId||a.id] || '' })) };
+    }
+    // Fallback: creator API
+    const r2 = await rbx(`https://create.roblox.com/v1/assets?assetType=${assetType}&limit=50`, {}, token);
+    if (r2.ok) {
+      const assets = r2.data?.data || [];
+      const ids = assets.map(a => a.id).filter(Boolean);
+      const thumbMap = ids.length ? await fetchThumbs(ids, 'asset') : {};
+      return { data: assets.map(a => ({ ...a, thumbnailUrl: thumbMap[a.id] || '' })) };
+    }
+    throw new Error('Could not load assets (' + r.status + '). Ensure asset:read scope is granted in your Roblox OAuth client.');
   },
 
   // GAME PASSES (game-pass:read)
@@ -290,9 +279,15 @@ const ACTIONS = {
   },
   async notifPrefs({}, token) {
     if (!token) throw new Error('Authentication required');
-    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/opt-in-status', {}, token);
-    if (!r.ok) throw new Error('Could not load notification preferences');
-    return { data: r.data?.data || [] };
+    // Get user's notification opt-in status for experiences they've played
+    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/opt-in-status?maxPageSize=50', {}, token);
+    if (!r.ok) {
+      // Fallback: try legacy endpoint
+      const r2 = await rbx('https://notifications.roblox.com/v2/push-notifications/notification-opt-out-list', {}, token);
+      if (!r2.ok) throw new Error('Could not load notification preferences. Ensure user.user-notification:write scope is granted.');
+      return { data: r2.data?.notificationOptOutList || [] };
+    }
+    return { data: r.data?.experienceNotificationOptInStatuses || r.data?.data || [] };
   },
 
   // TOGGLE EXPERIENCE NOTIFICATION (legacy-universe.following:write)
@@ -310,9 +305,16 @@ const ACTIONS = {
   // LIST RECENT EXPERIENCE NOTIFICATIONS
   async notifList({}, token) {
     if (!token) throw new Error('Authentication required');
-    const r = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {}, token);
-    if (!r.ok) throw new Error('Could not load notifications');
-    const items = r.data?.notifications || r.data?.data || [];
+    // Try Open Cloud notification history
+    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/notifications?maxPageSize=25', {}, token);
+    if (r.ok) {
+      const items = r.data?.notifications || r.data?.data || [];
+      return { data: items };
+    }
+    // Fallback
+    const r2 = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {}, token);
+    if (!r2.ok) throw new Error('Could not load notifications. Ensure user.user-notification:write scope is granted.');
+    const items = r2.data?.notifications || r2.data?.data || [];
     return { data: items };
   },
 
@@ -333,29 +335,43 @@ const ACTIONS = {
   },
 
   // INVENTORY
-  async inventory({ userId }) {
+  async inventory({ userId }, token) {
     if (!userId) throw new Error('userId required');
+    // Try with Open Cloud token first (user.inventory-item:read scope)
+    if (token) {
+      const r = await rbx(`https://apis.roblox.com/cloud/v2/users/${userId}/inventory-items?maxPageSize=50`, {}, token);
+      if (r.ok) {
+        const items = r.data?.inventoryItems || [];
+        const assetIds = items.map(i => i.assetDetails?.assetId).filter(Boolean);
+        const thumbMap = assetIds.length ? await fetchThumbs(assetIds, 'asset') : {};
+        return { data: items.map(i => {
+          const aid = i.assetDetails?.assetId;
+          return { ...i, assetId: aid, name: i.assetDetails?.assetName||i.name||'Unknown', thumbnail: thumbMap[aid]||'', _group: 'accessories' };
+        })};
+      }
+    }
+    // Fallback: public inventory endpoint
     const r = await rbx(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=8,41,42,43,44,45,46,47,48&limit=25&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Inventory API error ' + r.status);
+    if (!r.ok) throw new Error('Inventory API error ' + r.status + '. Make sure inventory is public or grant inventory:read scope.');
     const items = r.data?.data || [];
     const assetIds = items.map(i => i.assetId).filter(Boolean);
     const thumbMap = await fetchThumbs(assetIds, 'asset');
-    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })) };
+    return { data: items.map(i => ({ ...i, thumbnail: thumbMap[i.assetId] || '' })) };
   },
 
   // ACCOUNT VALUE / RAP
-  async value({ userId }) {
+  async value({ userId }, token) {
     if (!userId) throw new Error('userId required');
     // Collectibles (limiteds with RAP)
-    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Value API error');
+    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`, {}, token || '');
+    if (!r.ok) throw new Error('Value API error ' + r.status);
     const items = r.data?.data || [];
     let totalRap = 0;
     items.forEach(i => { totalRap += i.recentAveragePrice || 0; });
     const assetIds = items.map(i => i.assetId).filter(Boolean);
     const thumbMap = await fetchThumbs(assetIds, 'asset');
     return {
-      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })),
+      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '', thumbnail: thumbMap[i.assetId] || '', _group: 'limiteds', rap: i.recentAveragePrice || 0 })),
       totalRap,
     };
   },
