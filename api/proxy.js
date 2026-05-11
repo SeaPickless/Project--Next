@@ -216,29 +216,31 @@ const ACTIONS = {
     return { data: badges.map(b => ({ ...b, thumbnailUrl: thumbMap[b.id] || b.displayIconImageId ? `https://www.roblox.com/asset-thumbnail/image?assetId=${b.displayIconImageId}&width=64&height=64&format=png` : '' })) };
   },
 
-  // MY ASSETS (asset:read scope)
+  // MY ASSETS — uses Open Cloud creator assets endpoint (replaces deprecated develop.roblox.com)
   async myAssets({ assetType = 'Model' }, token) {
     if (!token) throw new Error('Authentication required');
-    // Map UI type names to Roblox assetType numeric IDs for Open Cloud
-    const typeMap = { Model:10, Plugin:38, Decal:13, Audio:3, Image:1, Animation:24, MeshPart:40, Plugins:38 };
-    const typeId = typeMap[assetType] || 10;
-    // Try Open Cloud assets API
-    const r = await rbx(`https://apis.roblox.com/assets/v1/assets?assetType=${typeId}&limit=50`, {}, token);
-    if (r.ok && (r.data?.assets||r.data?.data)) {
-      const assets = r.data?.assets || r.data?.data || [];
-      const ids = assets.map(a => a.assetId||a.id).filter(Boolean);
-      const thumbMap = ids.length ? await fetchThumbs(ids, 'asset') : {};
-      return { data: assets.map(a => ({ ...a, id: a.assetId||a.id, thumbnailUrl: thumbMap[a.assetId||a.id] || '' })) };
+    // Map UI type names to Roblox assetType numbers used by Open Cloud
+    const typeMap = { Model: 10, Decal: 13, Audio: 3, Plugin: 38, Animation: 24 };
+    const typeNum = typeMap[assetType] || 10;
+    // Try Open Cloud first
+    let r = await rbx(
+      `https://apis.roblox.com/assets/v1/assets?assetType=${typeNum}&limit=50`,
+      {},
+      token
+    );
+    if (!r.ok) {
+      // Fallback to legacy develop endpoint (may still work for some accounts)
+      r = await rbx(
+        `https://develop.roblox.com/v1/user/assets?assetType=${encodeURIComponent(assetType)}&limit=50&sortOrder=Desc`,
+        {},
+        token
+      );
     }
-    // Fallback: creator API
-    const r2 = await rbx(`https://create.roblox.com/v1/assets?assetType=${assetType}&limit=50`, {}, token);
-    if (r2.ok) {
-      const assets = r2.data?.data || [];
-      const ids = assets.map(a => a.id).filter(Boolean);
-      const thumbMap = ids.length ? await fetchThumbs(ids, 'asset') : {};
-      return { data: assets.map(a => ({ ...a, thumbnailUrl: thumbMap[a.id] || '' })) };
-    }
-    throw new Error('Could not load assets (' + r.status + '). Ensure asset:read scope is granted in your Roblox OAuth client.');
+    if (!r.ok) throw new Error('Could not load assets: ' + r.status);
+    const assets = r.data?.data || r.data?.assets || [];
+    const ids = assets.map(a => a.id || a.assetId).filter(Boolean);
+    const thumbMap = await fetchThumbs(ids, 'asset');
+    return { data: assets.map(a => ({ ...a, thumbnailUrl: thumbMap[a.id || a.assetId] || '' })) };
   },
 
   // GAME PASSES (game-pass:read)
@@ -279,15 +281,14 @@ const ACTIONS = {
   },
   async notifPrefs({}, token) {
     if (!token) throw new Error('Authentication required');
-    // Get user's notification opt-in status for experiences they've played
-    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/opt-in-status?maxPageSize=50', {}, token);
+    // Try the experience-notifications opt-in status endpoint
+    let r = await rbx('https://apis.roblox.com/experience-notifications/v1/opt-in-status', {}, token);
     if (!r.ok) {
-      // Fallback: try legacy endpoint
-      const r2 = await rbx('https://notifications.roblox.com/v2/push-notifications/notification-opt-out-list', {}, token);
-      if (!r2.ok) throw new Error('Could not load notification preferences. Ensure user.user-notification:write scope is granted.');
-      return { data: r2.data?.notificationOptOutList || [] };
+      // Fallback: notifications.roblox.com preferences
+      r = await rbx('https://notifications.roblox.com/v2/notifications/notification-source-types', {}, token);
     }
-    return { data: r.data?.experienceNotificationOptInStatuses || r.data?.data || [] };
+    if (!r.ok) throw new Error('Could not load notification preferences: ' + r.status);
+    return { data: r.data?.data || r.data?.notificationSourceTypes || [] };
   },
 
   // TOGGLE EXPERIENCE NOTIFICATION (legacy-universe.following:write)
@@ -305,16 +306,9 @@ const ACTIONS = {
   // LIST RECENT EXPERIENCE NOTIFICATIONS
   async notifList({}, token) {
     if (!token) throw new Error('Authentication required');
-    // Try Open Cloud notification history
-    const r = await rbx('https://apis.roblox.com/experience-notifications/v1/notifications?maxPageSize=25', {}, token);
-    if (r.ok) {
-      const items = r.data?.notifications || r.data?.data || [];
-      return { data: items };
-    }
-    // Fallback
-    const r2 = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {}, token);
-    if (!r2.ok) throw new Error('Could not load notifications. Ensure user.user-notification:write scope is granted.');
-    const items = r2.data?.notifications || r2.data?.data || [];
+    const r = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {}, token);
+    if (!r.ok) throw new Error('Could not load notifications');
+    const items = r.data?.notifications || r.data?.data || [];
     return { data: items };
   },
 
@@ -334,44 +328,58 @@ const ACTIONS = {
     return { data: map };
   },
 
-  // INVENTORY
+  // INVENTORY — uses Open Cloud v1 with Bearer token forwarded from frontend
   async inventory({ userId }, token) {
     if (!userId) throw new Error('userId required');
-    // Try with Open Cloud token first (user.inventory-item:read scope)
-    if (token) {
-      const r = await rbx(`https://apis.roblox.com/cloud/v2/users/${userId}/inventory-items?maxPageSize=50`, {}, token);
-      if (r.ok) {
-        const items = r.data?.inventoryItems || [];
-        const assetIds = items.map(i => i.assetDetails?.assetId).filter(Boolean);
-        const thumbMap = assetIds.length ? await fetchThumbs(assetIds, 'asset') : {};
-        return { data: items.map(i => {
-          const aid = i.assetDetails?.assetId;
-          return { ...i, assetId: aid, name: i.assetDetails?.assetName||i.name||'Unknown', thumbnail: thumbMap[aid]||'', _group: 'accessories' };
-        })};
-      }
+    if (!token) throw new Error('Authentication required for inventory access');
+    // Open Cloud v1 inventory endpoint (replaces deprecated inventory.roblox.com)
+    const r = await rbx(
+      `https://apis.roblox.com/cloud/v2/users/${userId}/inventory-items?maxPageSize=50`,
+      {},
+      token
+    );
+    if (!r.ok) {
+      // Fallback: try legacy inventory endpoint (works for public inventories)
+      const legacy = await rbx(
+        `https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=8,41,42,43,44,45,46,47,48&limit=25&sortOrder=Desc`,
+        {},
+        token
+      );
+      if (!legacy.ok) throw new Error('Inventory API error ' + r.status + ' (also tried legacy: ' + legacy.status + ')');
+      const items = legacy.data?.data || [];
+      const assetIds = items.map(i => i.assetId).filter(Boolean);
+      const thumbMap = await fetchThumbs(assetIds, 'asset');
+      return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })) };
     }
-    // Fallback: public inventory endpoint
-    const r = await rbx(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=8,41,42,43,44,45,46,47,48&limit=25&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Inventory API error ' + r.status + '. Make sure inventory is public or grant inventory:read scope.');
-    const items = r.data?.data || [];
+    // Normalize Open Cloud response shape
+    const rawItems = r.data?.inventoryItems || r.data?.data || [];
+    const items = rawItems.map(i => ({
+      assetId: i.assetDetails?.assetId || i.assetId,
+      name: i.assetDetails?.inventoryItemDetails?.name || i.name || 'Unknown',
+      assetType: i.assetDetails?.assetType || i.assetType,
+      rap: i.assetDetails?.recentAveragePrice || 0,
+      price: i.assetDetails?.salePrice || 0,
+      serialNumber: i.assetDetails?.serialNumber || null,
+      _group: 'inventory',
+    }));
     const assetIds = items.map(i => i.assetId).filter(Boolean);
     const thumbMap = await fetchThumbs(assetIds, 'asset');
-    return { data: items.map(i => ({ ...i, thumbnail: thumbMap[i.assetId] || '' })) };
+    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })) };
   },
 
   // ACCOUNT VALUE / RAP
-  async value({ userId }, token) {
+  async value({ userId }) {
     if (!userId) throw new Error('userId required');
     // Collectibles (limiteds with RAP)
-    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`, {}, token || '');
-    if (!r.ok) throw new Error('Value API error ' + r.status);
+    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
+    if (!r.ok) throw new Error('Value API error');
     const items = r.data?.data || [];
     let totalRap = 0;
     items.forEach(i => { totalRap += i.recentAveragePrice || 0; });
     const assetIds = items.map(i => i.assetId).filter(Boolean);
     const thumbMap = await fetchThumbs(assetIds, 'asset');
     return {
-      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '', thumbnail: thumbMap[i.assetId] || '', _group: 'limiteds', rap: i.recentAveragePrice || 0 })),
+      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })),
       totalRap,
     };
   },
@@ -469,6 +477,49 @@ const ACTIONS = {
   async revokeDevice({ deviceId }) {
     // Direct Roblox session revocation - open security page
     return { redirectUrl: 'https://www.roblox.com/my/account#!/security', note: 'Redirect to Roblox security' };
+  },
+
+  // TOP GAMES — fetches currently most-played games from Roblox
+  async topGames({ limit = 10 }) {
+    const n = Math.min(Number(limit) || 10, 20);
+    const r = await rbx(`https://games.roblox.com/v1/games/list?SortFilter=2&GameFilter=0&ContextFilter=1&StartRows=0&MaxRows=${n}`);
+    if (!r.ok) throw new Error('Could not fetch top games');
+    const raw = r.data?.games || r.data?.data || [];
+    return {
+      data: raw.map(g => ({
+        name: g.name,
+        placeId: g.placeId || g.rootPlaceId,
+        genre: g.genre || 'All Genres',
+        players: g.totalUpVotes ? `${(g.totalUpVotes / 1e6).toFixed(1)}M likes` : '',
+        ratio: g.totalUpVotes && g.totalDownVotes
+          ? Math.round(g.totalUpVotes / (g.totalUpVotes + g.totalDownVotes) * 100) + '%'
+          : '',
+        visiting: g.playerCount || g.playing || 0,
+        visits: g.visits ? (g.visits >= 1e9 ? (g.visits/1e9).toFixed(1)+'B visits' : (g.visits/1e6).toFixed(0)+'M visits') : '',
+      }))
+    };
+  },
+
+  // SEARCH GAMES — name-matched Top 5 results
+  async searchGames({ q, limit = 5 }) {
+    if (!q) throw new Error('q required');
+    const n = Math.min(Number(limit) || 5, 10);
+    const r = await rbx(`https://games.roblox.com/v1/games/list?Keyword=${encodeURIComponent(q)}&SortFilter=0&GameFilter=0&MaxRows=${n}`);
+    if (!r.ok) throw new Error('Could not search games');
+    const raw = r.data?.games || r.data?.data || [];
+    return {
+      data: raw.map(g => ({
+        name: g.name,
+        placeId: g.placeId || g.rootPlaceId,
+        genre: g.genre || 'All Genres',
+        players: g.visits ? (g.visits >= 1e9 ? (g.visits/1e9).toFixed(1)+'B visits' : (g.visits/1e6).toFixed(0)+'M visits') : '',
+        ratio: g.totalUpVotes && g.totalDownVotes
+          ? Math.round(g.totalUpVotes / (g.totalUpVotes + g.totalDownVotes) * 100) + '%'
+          : '',
+        visiting: g.playerCount || g.playing || 0,
+        visits: g.visits ? (g.visits >= 1e9 ? (g.visits/1e9).toFixed(1)+'B visits' : (g.visits/1e6).toFixed(0)+'M visits') : '',
+      }))
+    };
   },
 
   // USER INFO by userId
