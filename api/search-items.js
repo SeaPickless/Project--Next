@@ -3,6 +3,12 @@
 // FIX #4: Demand, RAP, Trend fully merged from Rolimons
 // FIX #5: Thumbnails use 420x420 via thumbnails.roblox.com (no emoji placeholders)
 // FIX #6: Demand/Trend use rich emoji icons
+// FIX: DEP0169 url.parse() deprecation warning silenced
+
+process.on('warning', (w) => {
+  if (w.name === 'DeprecationWarning' && w.code === 'DEP0169') return;
+  process.stderr.write(`[warning] ${w.name}: ${w.message}\n`);
+});
 
 const https = require('https');
 
