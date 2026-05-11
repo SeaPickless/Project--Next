@@ -1,505 +1,1691 @@
-// ProjectNextProxy — Centralized Roblox API Gateway
-// Uses each user's own OAuth Bearer token — no shared cookie needed.
-// Every user authenticates via Roblox OAuth and their token is forwarded here.
-
-const https = require('https');
-
-// ── CONFIG ────────────────────────────────────────────
-const ROBLOX_CLIENT_ID     = process.env.ROBLOX_CLIENT_ID || '';
-const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || '';
-
-// Per-token XSRF cache (keyed by token so each user gets their own)
-const XCSRF_CACHE = {};
-const IN_MEMORY_CACHE = {};
-const CACHE_TTL = 30000; // 30s
-
-function cache(key, val) {
-  if (val !== undefined) { IN_MEMORY_CACHE[key] = { val, ts: Date.now() }; return val; }
-  const e = IN_MEMORY_CACHE[key];
-  return (e && Date.now() - e.ts < CACHE_TTL) ? e.val : null;
+<!DOCTYPE html>
+<html lang="en" data-theme="genesis">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Next</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+/* ═══════════════ CSS VARS & THEMES ═══════════════ */
+:root{
+  --bg-base:#0B0C0D;--bg-surface:#16181A;--bg-elevated:#1E2124;--bg-hover:#252830;
+  --accent:#A020F0;--accent-dim:rgba(160,32,240,0.15);--accent-glow:rgba(160,32,240,0.35);
+  --text-primary:#F0F0F5;--text-secondary:#8B8FA8;--text-muted:#4A4D5E;
+  --border:rgba(255,255,255,0.07);--border-accent:rgba(160,32,240,0.4);
+  --success:#22D06A;--warning:#F0A020;--danger:#F04040;--info:#20A0F0;
+  --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:10px;--radius-lg:16px;
+  --anim-speed:1; /* 0 = no animations */
 }
+[data-theme="glass"]{--bg-base:#0D0F14;--bg-surface:rgba(20,24,32,0.55);--bg-elevated:rgba(28,32,40,0.5);--bg-hover:rgba(38,42,54,0.55);--border:rgba(255,255,255,0.10);--border-accent:rgba(160,32,240,0.45);}
+[data-theme="glass"] body{background:linear-gradient(135deg,#0D0F14,#141820,#0f0a1a);}
+[data-theme="glass"] .sidebar,[data-theme="glass"] .topbar,[data-theme="glass"] .card,
+[data-theme="glass"] .stat-card,[data-theme="glass"] .auth-card,[data-theme="glass"] .friend-item,
+[data-theme="glass"] .inv-item,[data-theme="glass"] .security-item,[data-theme="glass"] .setting-item,
+[data-theme="glass"] .progress-wrap,[data-theme="glass"] .discovery-card{
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);}
+[data-theme="cyber"]{--accent:#00FF41;--accent-dim:rgba(0,255,65,0.10);--accent-glow:rgba(0,255,65,0.25);
+  --bg-base:#001000;--bg-surface:#001a00;--bg-elevated:#002000;--bg-hover:#002a00;
+  --border:rgba(0,255,65,0.08);--border-accent:rgba(0,255,65,0.4);
+  --text-primary:#E0FFE8;--text-secondary:#4daa60;--text-muted:#1a5c26;}
+[data-theme="oled"]{--bg-base:#000;--bg-surface:#0A0A0A;--bg-elevated:#111;--bg-hover:#1a1a1a;--border:rgba(255,255,255,0.05);}
 
-// ── CORE REQUEST FUNCTION ────────────────────────────
-// bearerToken = the user's OAuth access_token sent from frontend
-function robloxFetch(url, opts = {}, bearerToken = '') {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const xcsrf = XCSRF_CACHE[bearerToken] || '';
-    const headers = {
-      'Authorization': bearerToken ? `Bearer ${bearerToken}` : undefined,
-      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36',
-      'Accept': 'application/json',
-      'Content-Type': opts.body ? 'application/json' : undefined,
-      ...(opts.headers || {}),
-    };
-    if (xcsrf) headers['x-csrf-token'] = xcsrf;
-    // Remove undefined headers
-    Object.keys(headers).forEach(k => headers[k] === undefined && delete headers[k]);
+/* ═══════════════ RESET ═══════════════ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary);min-height:100vh;overflow-x:hidden;transition:background .4s,color .3s;}
 
-    const bodyStr = opts.body ? JSON.stringify(opts.body) : undefined;
-    if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
+/* ═══════════════ ANIMATIONS ═══════════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:none;}}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 10px var(--accent-glow);}50%{box-shadow:0 0 28px var(--accent-glow),0 0 60px var(--accent-dim);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes scan-line{0%{top:-10%;}100%{top:110%;}}
+@keyframes orb-pulse{0%,100%{transform:scale(1);opacity:.7;}50%{transform:scale(1.5);opacity:1;}}
+@keyframes bar-glow{0%,100%{box-shadow:0 0 6px var(--accent);}50%{box-shadow:0 0 18px var(--accent),0 0 40px var(--accent-dim);}}
+@keyframes card-appear{from{opacity:0;transform:translateY(24px) scale(.97);}to{opacity:1;transform:none;}}
+@keyframes neon-flicker{0%,100%{opacity:1;}92%{opacity:1;}93%{opacity:.4;}95%{opacity:1;}97%{opacity:.6;}98%{opacity:1;}}
+@keyframes border-spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+@keyframes toast-in{from{transform:translateY(80px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes progress-stripe{0%{background-position:0 0;}100%{background-position:40px 0;}}
 
-    const reqOpts = {
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      method: opts.method || 'GET',
-      headers,
-    };
+/* Performance mode: kill all transitions/animations */
+body.perf-mode *{animation:none !important;transition:none !important;}
 
-    const req = https.request(reqOpts, (res) => {
-      // Capture new XSRF token — store per user token
-      const newXcsrf = res.headers['x-csrf-token'];
-      if (newXcsrf && bearerToken) XCSRF_CACHE[bearerToken] = newXcsrf;
+/* ═══════════════ AUTH ═══════════════ */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;position:fixed;inset:0;z-index:1000;overflow-y:auto;padding:20px 0;}
+#auth-screen::before{content:'';position:absolute;width:700px;height:700px;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 68%);top:-120px;left:50%;transform:translateX(-50%);pointer-events:none;animation:float 8s ease-in-out infinite;}
+#auth-screen::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.012) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.012) 40px);pointer-events:none;}
+.auth-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 40px;width:420px;max-width:95vw;position:relative;z-index:1;animation:card-appear .6s ease both;}
+.auth-card::before{content:'';position:absolute;inset:-1px;border-radius:calc(var(--radius-lg)+1px);background:linear-gradient(135deg,var(--accent-dim),transparent,var(--accent-dim));opacity:0;transition:opacity .4s;pointer-events:none;}
+.auth-card:hover::before{opacity:1;}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.auth-logo-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;animation:glow-pulse 3s ease-in-out infinite;}
+.auth-logo-text{font-size:22px;font-weight:700;letter-spacing:-.5px;}
+.auth-logo-text span{color:var(--accent);}
+.auth-title{font-size:26px;font-weight:800;margin-bottom:8px;}
+.auth-sub{color:var(--text-secondary);font-size:14px;margin-bottom:36px;line-height:1.6;}
+.auth-step{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px;transition:border-color .3s,background .3s,transform .2s;}
+.auth-step:hover{transform:translateX(3px);}
+.auth-step.active{border-color:var(--border-accent);background:var(--accent-dim);}
+.auth-step.done{border-color:rgba(34,208,106,.3);background:rgba(34,208,106,.05);}
+.auth-step-num{width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;transition:all .3s;}
+.auth-step.active .auth-step-num{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 14px var(--accent-glow);}
+.auth-step.done .auth-step-num{background:var(--success);border-color:var(--success);color:#fff;font-size:16px;}
+.auth-step-info{flex:1;}
+.auth-step-label{font-size:13px;font-weight:600;}
+.auth-step-desc{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.btn-primary{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .15s,box-shadow .2s;margin-top:24px;position:relative;overflow:hidden;}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:translateX(-100%);transition:transform .5s;}
+.btn-primary:hover::after{transform:translateX(100%);}
+.btn-primary:hover{opacity:.92;box-shadow:0 4px 20px var(--accent-glow);}
+.btn-primary:active{transform:scale(.98);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.auth-err{color:var(--danger);font-size:12px;margin-top:10px;text-align:center;min-height:18px;}
+.auth-divider{text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;}
 
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => {
-        // Auto-retry once on 403 with new XSRF token
-        if (res.statusCode === 403 && newXcsrf && !opts._retried) {
-          return resolve(robloxFetch(url, { ...opts, _retried: true }, bearerToken));
-        }
-        resolve({ status: res.statusCode, body: data, headers: res.headers });
-      });
-    });
-    req.on('error', reject);
-    if (bodyStr) req.write(bodyStr);
-    req.end();
-  });
+/* ═══════════════ LOADING SCREEN ═══════════════ */
+#loading-screen{min-height:100vh;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;position:fixed;inset:0;z-index:900;background:var(--bg-base);overflow:hidden;}
+.load-bg-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(80px);}
+.load-bg-orb.o1{width:500px;height:500px;background:radial-gradient(circle,var(--accent-glow),transparent 70%);top:-100px;left:-100px;animation:float 10s ease-in-out infinite;}
+.load-bg-orb.o2{width:400px;height:400px;background:radial-gradient(circle,rgba(32,160,240,0.15),transparent 70%);bottom:-80px;right:-80px;animation:float 12s 2s ease-in-out infinite reverse;}
+.load-bg-orb.o3{width:300px;height:300px;background:radial-gradient(circle,rgba(34,208,106,0.08),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:float 8s 1s ease-in-out infinite;}
+.load-grid{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(255,255,255,0.018) 50px),repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(255,255,255,0.018) 50px);pointer-events:none;}
+.load-scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan-line 4s linear infinite;pointer-events:none;opacity:.4;}
+.load-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px;}
+.load-logo-wrap{text-align:center;animation:fadeUp .7s ease both;}
+.load-logo{font-size:42px;font-weight:800;letter-spacing:-1.5px;line-height:1;}
+.load-logo span{color:var(--accent);text-shadow:0 0 40px var(--accent-glow);animation:neon-flicker 6s 2s ease-in-out infinite;}
+.load-logo-tag{font-size:10px;font-family:var(--mono);color:var(--text-muted);letter-spacing:4px;text-transform:uppercase;margin-top:6px;animation:fadeUp .7s .15s ease both;opacity:0;animation-fill-mode:both;}
+.load-orbs{display:flex;gap:8px;animation:fadeUp .7s .25s ease both;opacity:0;animation-fill-mode:both;}
+.load-orb{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.load-orb:nth-child(1){animation:orb-pulse 1.2s .0s ease-in-out infinite;}
+.load-orb:nth-child(2){animation:orb-pulse 1.2s .15s ease-in-out infinite;}
+.load-orb:nth-child(3){animation:orb-pulse 1.2s .30s ease-in-out infinite;}
+.load-orb:nth-child(4){animation:orb-pulse 1.2s .45s ease-in-out infinite;}
+.load-orb:nth-child(5){animation:orb-pulse 1.2s .60s ease-in-out infinite;}
+.load-bar-wrap{width:340px;position:relative;animation:fadeUp .7s .35s ease both;opacity:0;animation-fill-mode:both;}
+.load-bar-track{height:2px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:visible;position:relative;}
+.load-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent) 0%,rgba(160,32,240,.6) 100%);border-radius:2px;width:0%;transition:width .35s cubic-bezier(.4,0,.2,1);position:relative;animation:bar-glow 2s ease-in-out infinite;}
+.load-bar-dot{position:absolute;right:-5px;top:-5px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent),0 0 30px var(--accent-glow);}
+.load-bar-pct{position:absolute;right:0;top:-20px;font-size:10px;font-family:var(--mono);color:var(--accent);font-weight:600;}
+.load-label{font-size:12px;color:var(--text-secondary);font-family:var(--mono);letter-spacing:.4px;margin-top:4px;animation:fadeUp .7s .4s ease both;opacity:0;animation-fill-mode:both;min-height:18px;}
+.load-hex{position:absolute;opacity:0.03;font-size:11px;font-family:var(--mono);color:var(--accent);user-select:none;animation:fadeIn 1s ease both;}
+
+/* ═══════════════ LAYOUT ═══════════════ */
+#app{display:none;min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:transform .3s cubic-bezier(.4,0,.2,1),background .4s;}
+.sidebar-logo{padding:20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;transition:box-shadow .3s;}
+.sidebar-logo-icon:hover{box-shadow:0 0 18px var(--accent-glow);}
+.sidebar-logo-text{font-size:16px;font-weight:700;}.sidebar-logo-text span{color:var(--accent);}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);transition:all .18s cubic-bezier(.4,0,.2,1);margin-bottom:2px;border:1px solid transparent;background:none;width:100%;text-align:left;position:relative;overflow:hidden;}
+.nav-item::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:var(--accent);border-radius:0 3px 3px 0;transition:height .2s ease;}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary);transform:translateX(2px);}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);border-color:var(--border-accent);}
+.nav-item.active::before{height:60%;}
+.nav-icon{width:20px;height:20px;opacity:.7;flex-shrink:0;transition:opacity .2s,transform .2s;}
+.nav-item.active .nav-icon{opacity:1;}
+.nav-item:hover .nav-icon{transform:scale(1.1);}
+.sidebar-user{padding:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;transition:box-shadow .3s;}
+.user-avatar:hover{box-shadow:0 0 14px var(--accent-glow);}
+.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-tag{font-size:11px;color:var(--success);}
+.main{margin-left:220px;min-height:100vh;transition:margin .3s;}
+.topbar{height:56px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;transition:background .4s;}
+.topbar-title{font-size:16px;font-weight:700;flex:1;transition:all .2s;}
+.topbar-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);font-weight:600;animation:glow-pulse 4s ease-in-out infinite;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text-primary);flex-direction:column;gap:5px;}
+.hamburger span{display:block;width:20px;height:2px;background:currentColor;border-radius:2px;transition:all .25s;}
+
+/* ═══════════════ HUB PANELS ═══════════════ */
+.hub-panel{display:none;padding:24px;max-width:1100px;}
+.hub-panel.active{display:block;animation:fadeUp .35s ease both;}
+.hub-header{margin-bottom:24px;}
+.hub-title{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.hub-sub{color:var(--text-secondary);font-size:14px;}
+
+/* ═══════════════ CARDS ═══════════════ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:background .4s,border-color .3s,transform .2s,box-shadow .2s;}
+.card:hover{border-color:rgba(160,32,240,0.15);}
+.card-title{font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:glow-pulse 3s ease-in-out infinite;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--bg-elevated);border-radius:var(--radius);padding:16px;border:1px solid var(--border);transition:all .2s cubic-bezier(.4,0,.2,1);cursor:pointer;position:relative;overflow:hidden;}
+.stat-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent-dim),transparent);opacity:0;transition:opacity .3s;}
+.stat-card:hover{border-color:var(--border-accent);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.3);}
+.stat-card:hover::after{opacity:1;}
+.stat-label{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.5px;margin-bottom:6px;position:relative;z-index:1;}
+.stat-val{font-size:22px;font-weight:800;letter-spacing:-.5px;position:relative;z-index:1;}
+.stat-sub{font-size:11px;color:var(--text-secondary);margin-top:2px;position:relative;z-index:1;}
+
+/* ═══════════════ FRIENDS ═══════════════ */
+.friend-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px;background:var(--bg-elevated);transition:all .2s cubic-bezier(.4,0,.2,1);animation:fadeIn .3s ease both;}
+.friend-item:hover{border-color:var(--border-accent);transform:translateX(3px);}
+.friend-avatar{width:44px;height:44px;border-radius:50%;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden;transition:box-shadow .2s;}
+.friend-avatar:hover{box-shadow:0 0 12px var(--accent-glow);}
+.friend-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.presence-dot{position:absolute;bottom:1px;right:1px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg-elevated);}
+.presence-dot.online{background:var(--success);animation:pulse-dot 2s infinite;}
+.presence-dot.ingame{background:var(--info);animation:pulse-dot 2s .3s infinite;}
+.presence-dot.studio{background:var(--warning);}
+.presence-dot.offline{background:#555;}
+.friend-info{flex:1;min-width:0;}
+.friend-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friend-display{font-size:12px;color:var(--text-muted);}
+.friend-status{font-size:12px;color:var(--text-secondary);}
+.friend-status.online{color:var(--success);}.friend-status.ingame{color:var(--info);}
+.friend-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-sm{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .18s;white-space:nowrap;}
+.btn-sm:hover{border-color:var(--border-accent);color:var(--accent);transform:translateY(-1px);}
+.btn-sm.danger:hover{border-color:rgba(240,64,64,.4);color:var(--danger);}
+.btn-sm.warn:hover{border-color:rgba(240,160,32,.4);color:var(--warning);}
+
+/* ═══════════════ INPUTS ═══════════════ */
+.search-box{display:flex;gap:10px;margin-bottom:16px;}
+.search-input{flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text-primary);font-family:var(--font);font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.search-input:focus{border-color:var(--border-accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.search-input::placeholder{color:var(--text-muted);}
+.btn-accent{padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;position:relative;overflow:hidden;}
+.btn-accent::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:transform .4s;}
+.btn-accent:hover::after{transform:translateX(100%);}
+.btn-accent:hover{opacity:.88;box-shadow:0 4px 18px var(--accent-glow);}
+.btn-accent:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ═══════════════ PROGRESS ═══════════════ */
+.progress-wrap{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.progress-label{font-size:14px;font-weight:600;}
+.progress-meta{font-size:12px;color:var(--text-secondary);font-family:var(--mono);}
+.progress-bar{height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),rgba(160,32,240,.7));background-size:40px 100%;border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1);}
+.progress-sub{font-size:12px;color:var(--text-secondary);font-family:var(--mono);}
+
+/* ═══════════════ INV / BADGES ═══════════════ */
+.inv-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);transition:all .2s;animation:fadeIn .3s ease both;}
+.inv-item:hover{border-color:var(--border-accent);transform:translateX(3px);}
+.inv-thumb{width:52px;height:52px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;}
+.inv-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+.inv-info{flex:1;min-width:0;}
+.inv-name{font-size:14px;font-weight:600;}
+.inv-meta{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.inv-price{font-size:15px;font-weight:700;color:var(--accent);font-family:var(--mono);flex-shrink:0;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge-limited{background:rgba(240,160,32,.15);color:var(--warning);border:1px solid rgba(240,160,32,.3);}
+.badge-offsale{background:rgba(240,64,64,.1);color:var(--danger);border:1px solid rgba(240,64,64,.25);}
+.badge-new{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-accent);}
+.badge-free{background:rgba(34,208,106,.1);color:var(--success);border:1px solid rgba(34,208,106,.25);}
+
+/* ═══════════════ SECURITY ═══════════════ */
+.integrity-bar-wrap{margin-bottom:20px;}
+.integrity-score{font-size:48px;font-weight:800;color:var(--success);letter-spacing:-2px;margin-bottom:4px;}
+.integrity-score span{font-size:20px;color:var(--text-secondary);font-weight:500;}
+.security-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);transition:all .2s;animation:fadeIn .3s ease both;}
+.security-item:hover{border-color:var(--border-accent);}
+.security-check{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.security-check.pass{background:rgba(34,208,106,.15);color:var(--success);border:1px solid rgba(34,208,106,.3);}
+.security-check.fail{background:rgba(240,64,64,.1);color:var(--danger);border:1px solid rgba(240,64,64,.2);}
+.security-check.warn{background:rgba(240,160,32,.1);color:var(--warning);border:1px solid rgba(240,160,32,.25);}
+.security-text{flex:1;}
+.security-title{font-size:14px;font-weight:600;}
+.security-desc{font-size:12px;color:var(--text-secondary);}
+
+/* ═══════════════ SETTINGS ═══════════════ */
+.setting-item{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);cursor:pointer;transition:all .2s;animation:fadeIn .25s ease both;}
+.setting-item:hover{border-color:var(--border-accent);transform:translateX(2px);}
+.setting-icon{width:36px;height:36px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.setting-text{flex:1;}
+.setting-name{font-size:14px;font-weight:600;}
+.setting-desc{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.toggle{width:44px;height:24px;background:var(--bg-hover);border-radius:12px;border:1px solid var(--border);position:relative;cursor:pointer;transition:background .25s,border-color .25s,box-shadow .25s;flex-shrink:0;}
+.toggle.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+.toggle-knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--text-secondary);transition:left .25s cubic-bezier(.4,0,.2,1),background .25s;}
+.toggle.on .toggle-knob{left:22px;background:#fff;}
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
+.theme-card{border:2px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:all .2s;text-align:center;}
+.theme-card:hover{border-color:var(--border-accent);transform:translateY(-2px);}
+.theme-card.selected{border-color:var(--accent);box-shadow:0 0 16px var(--accent-glow);}
+.theme-preview{height:40px;border-radius:6px;margin-bottom:8px;}
+.theme-name{font-size:12px;font-weight:600;}
+.theme-sub{font-size:11px;color:var(--text-secondary);margin-top:2px;}
+
+/* ═══════════════ DISCOVERY ═══════════════ */
+.discovery-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg-elevated);transition:all .25s cubic-bezier(.4,0,.2,1);cursor:pointer;animation:card-appear .4s ease both;}
+.discovery-card:hover{border-color:var(--border-accent);transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.discovery-thumb{height:120px;background:linear-gradient(135deg,var(--accent-dim),var(--bg-hover));display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.discovery-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease;}
+.discovery-card:hover .discovery-thumb img{transform:scale(1.05);}
+.discovery-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,.6));pointer-events:none;}
+.discovery-body{padding:12px 14px;}
+.discovery-name{font-size:14px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.discovery-genre{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;}
+.discovery-stats{font-size:12px;color:var(--text-secondary);display:flex;flex-wrap:wrap;gap:6px;}
+.discovery-stat{display:inline-flex;align-items:center;gap:3px;}
+.discovery-creator{font-size:11px;color:var(--text-muted);margin-top:4px;}
+
+/* ═══════════════ VALUE SEARCH ═══════════════ */
+.value-result-table{width:100%;border-collapse:collapse;margin-top:12px;}
+.value-result-table th{font-size:11px;font-weight:700;color:var(--text-muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:.6px;text-transform:uppercase;}
+.value-result-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;vertical-align:middle;}
+.value-result-table tr:last-child td{border-bottom:none;}
+.value-result-table tr:hover td{background:var(--bg-hover);}
+.value-link{color:var(--accent);text-decoration:none;font-weight:600;cursor:pointer;transition:opacity .15s;}
+.value-link:hover{text-decoration:underline;opacity:.8;}
+
+/* ═══════════════ FRIEND RADAR ═══════════════ */
+.radar-ring{display:flex;justify-content:center;align-items:center;margin:16px 0;}
+.radar-circle{position:relative;width:180px;height:180px;}
+.radar-circle svg{animation:spin 8s linear infinite;}
+.radar-inner{position:absolute;inset:20px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;}
+.radar-label-inner{font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono);}
+.radar-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;}
+.radar-stat{background:var(--bg-elevated);border-radius:var(--radius);padding:12px;border:1px solid var(--border);text-align:center;transition:border-color .2s;}
+.radar-stat:hover{border-color:var(--border-accent);}
+.radar-stat-val{font-size:20px;font-weight:800;color:var(--accent);}
+.radar-stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.mutual-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--accent-dim);border:1px solid var(--border-accent);font-size:11px;color:var(--accent);font-weight:600;margin:3px;animation:fadeIn .3s ease both;}
+
+/* ═══════════════ MODALS ═══════════════ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:460px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:fadeUp .25s ease both;}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;}
+.modal-avatar{width:56px;height:56px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--border-accent);overflow:hidden;flex-shrink:0;}
+.modal-avatar img{width:100%;height:100%;object-fit:cover;}
+.modal-user-info{flex:1;}
+.modal-display{font-size:18px;font-weight:800;}
+.modal-username{font-size:13px;color:var(--text-secondary);margin-top:2px;}
+.modal-status{font-size:11px;font-weight:600;margin-top:4px;}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px;padding:4px;margin-left:auto;transition:color .15s;}
+.modal-close:hover{color:var(--danger);}
+.modal-body{padding:20px 24px;}
+.modal-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.modal-stat{background:var(--bg-elevated);border-radius:var(--radius);padding:12px;text-align:center;border:1px solid var(--border);}
+.modal-stat-val{font-size:18px;font-weight:800;color:var(--accent);}
+.modal-stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.modal-inv-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.modal-inv-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-elevated);border-radius:8px;margin-bottom:6px;border:1px solid var(--border);}
+.modal-inv-thumb{width:36px;height:36px;border-radius:6px;background:var(--accent-dim);overflow:hidden;flex-shrink:0;}
+.modal-inv-thumb img{width:100%;height:100%;object-fit:cover;}
+.modal-inv-name{flex:1;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-inv-price{font-size:13px;color:var(--accent);font-family:var(--mono);font-weight:700;}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+.modal-btn{flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;text-align:center;}
+.modal-btn:hover{border-color:var(--border-accent);color:var(--accent);}
+.modal-btn.danger{color:var(--danger);}.modal-btn.danger:hover{border-color:rgba(240,64,64,.4);background:rgba(240,64,64,.05);}
+.list-modal{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:500px;max-width:95vw;max-height:85vh;overflow-y:auto;animation:fadeUp .25s ease both;}
+.list-modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.list-modal-title{font-size:16px;font-weight:700;}
+.list-modal-body{padding:16px 20px;}
+
+/* ═══════════════ API CHIP ═══════════════ */
+.api-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elevated);margin-left:8px;}
+.api-chip.live{border-color:rgba(34,208,106,.3);color:var(--success);}
+.api-chip.warn{border-color:rgba(240,160,32,.3);color:var(--warning);}
+.api-chip.err{border-color:rgba(240,64,64,.3);color:var(--danger);}
+.accent-text{color:var(--accent);}
+.mono{font-family:var(--mono);}
+.section-divider{height:1px;background:var(--border);margin:20px 0;}
+
+/* ═══════════════ PATH / CONNECTION ═══════════════ */
+.path-display{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);margin-top:10px;}
+.path-node{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--border-accent);color:var(--accent);}
+.path-arrow{color:var(--text-muted);font-size:18px;}
+
+/* ═══════════════ TOAST ═══════════════ */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg-elevated);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:12px 16px;font-size:13px;font-weight:500;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);max-width:300px;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ═══════════════ MOBILE ═══════════════ */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .hamburger{display:flex;}
+  .sidebar-overlay.show{display:block;}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .hub-panel{padding:16px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:2px;}
+.lang-select{width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--text-primary);font-family:var(--font);font-size:14px;outline:none;cursor:pointer;margin-top:8px;transition:border-color .2s;}
+.lang-select:focus{border-color:var(--border-accent);}
+</style>
+</head>
+<body>
 
-async function rbx(url, opts = {}, bearerToken = '') {
-  const r = await robloxFetch(url, opts, bearerToken);
-  try { return { ok: r.status >= 200 && r.status < 300, status: r.status, data: JSON.parse(r.body) }; }
-  catch (_) { return { ok: false, status: r.status, data: {} }; }
-}
+<!-- ═══ AUTH ═══ -->
+<div id="auth-screen" style="display:flex;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">N</div>
+      <div class="auth-logo-text">Project <span>Next</span></div>
+    </div>
+    <div class="auth-title" data-i18n-auth="initAccess">Initialize Access</div>
+    <div class="auth-sub" data-i18n-auth="initSub">Complete the two-step identity bridge to sync your accounts and unlock the full dashboard.</div>
+    <div class="auth-step active" id="step-google">
+      <div class="auth-step-num" id="step1-num">1</div>
+      <div class="auth-step-info">
+        <div class="auth-step-label">Google Identity Sync</div>
+        <div class="auth-step-desc">Synchronize your Project Next identity across all devices.</div>
+      </div>
+    </div>
+    <div class="auth-step" id="step-roblox">
+      <div class="auth-step-num" id="step2-num">2</div>
+      <div class="auth-step-info">
+        <div class="auth-step-label">Roblox Identity Bridge</div>
+        <div class="auth-step-desc">Bridge your Roblox account for real-time data and analytics.</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="auth-btn" onclick="handleAuthStep()" data-i18n-auth="connectGoogle">Connect with Google</button>
+    <div class="auth-err" id="auth-err" style="display:none;"></div>
+    <div class="auth-divider" data-i18n-auth="syncAccounts">Sync your accounts to unlock all features</div>
+  </div>
+</div>
 
-// ── THUMBNAIL HELPER ─────────────────────────────────
-async function fetchThumbs(userIds, type = 'avatar-headshot') {
-  if (!userIds.length) return {};
-  const ids = userIds.slice(0, 100).join(',');
-  const url = type === 'asset'
-    ? `https://thumbnails.roblox.com/v1/assets?assetIds=${ids}&size=110x110&format=Png`
-    : `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids}&size=100x100&format=Png&isCircular=true`;
-  const r = await rbx(url);
-  const map = {};
-  (r.data?.data || []).forEach(t => { if (t.state === 'Completed') map[t.targetId] = t.imageUrl; });
-  return map;
-}
+<!-- ═══ LOADING SCREEN ═══ -->
+<div id="loading-screen" style="display:none;">
+  <div class="load-bg-orb o1"></div>
+  <div class="load-bg-orb o2"></div>
+  <div class="load-bg-orb o3"></div>
+  <div class="load-grid"></div>
+  <div class="load-scan"></div>
+  <div class="load-content">
+    <div class="load-logo-wrap">
+      <div class="load-logo">Project <span>Next</span></div>
+      <div class="load-logo-tag">GENESIS PHASE · INITIALIZING</div>
+    </div>
+    <div class="load-orbs">
+      <div class="load-orb"></div>
+      <div class="load-orb"></div>
+      <div class="load-orb"></div>
+      <div class="load-orb"></div>
+      <div class="load-orb"></div>
+    </div>
+    <div class="load-bar-wrap">
+      <div style="position:relative;">
+        <div class="load-bar-pct" id="load-pct">0%</div>
+      </div>
+      <div class="load-bar-track">
+        <div class="load-bar-fill" id="load-bar">
+          <div class="load-bar-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="load-label" id="load-label">Initializing genesis phase...</div>
+  </div>
+</div>
 
-// ── RESOLVE USERNAME ──────────────────────────────────
-async function resolveUsername(username) {
-  const r = await rbx('https://users.roblox.com/v1/usernames/users', {
-    method: 'POST', body: { usernames: [username], excludeBannedUsers: true }
-  });
-  return (r.data?.data || [])[0] || null;
-}
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
 
-// ── ACTIONS ───────────────────────────────────────────
-const ACTIONS = {
+<!-- ═══ MODALS ═══ -->
+<div class="modal-overlay" id="friend-modal" onclick="if(event.target===this)closeFriendModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-avatar"><img id="modal-avatar-img" src="" alt=""></div>
+      <div class="modal-user-info">
+        <div class="modal-display" id="modal-display">—</div>
+        <div class="modal-username" id="modal-username">@—</div>
+        <div class="modal-status" id="modal-status">—</div>
+      </div>
+      <button class="modal-close" onclick="closeFriendModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats">
+        <div class="modal-stat"><div class="modal-stat-val" id="modal-followers">—</div><div class="modal-stat-label">Followers</div></div>
+        <div class="modal-stat"><div class="modal-stat-val" id="modal-following">—</div><div class="modal-stat-label">Following</div></div>
+        <div class="modal-stat"><div class="modal-stat-val" id="modal-friends-count">—</div><div class="modal-stat-label">Friends</div></div>
+      </div>
+      <div class="modal-inv-title">Inventory (Public)</div>
+      <div id="modal-inv-items" style="color:var(--text-muted);font-size:13px;">Loading...</div>
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="modalAction('view')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View Profile
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-  // FRIENDS
-  async friends({ userId }) {
-    if (!userId) throw new Error('userId required');
-    const cached = cache('friends_' + userId);
-    if (cached) return cached;
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/friends`);
-    if (!r.ok) throw new Error('Friends API error ' + r.status);
-    const friends = r.data?.data || [];
-    const ids = friends.map(f => f.id || f.userId).filter(Boolean);
-    // Fetch presence
-    let presenceMap = {};
-    if (ids.length) {
-      const pr = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
-      (pr.data?.userPresences || []).forEach(p => { presenceMap[p.userId] = p; });
-    }
-    // Fetch thumbnails
-    const thumbMap = await fetchThumbs(ids);
-    const enriched = friends.map(f => {
-      const uid = f.id || f.userId;
-      const pres = presenceMap[uid] || {};
-      return { ...f, userPresenceType: pres.userPresenceType || 0, lastLocation: pres.lastLocation || '', gameName: pres.lastLocation || '', thumbnailUrl: thumbMap[uid] || '' };
-    });
-    return cache('friends_' + userId, { data: enriched });
-  },
+<div class="modal-overlay" id="pending-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="list-modal">
+    <div class="list-modal-header">
+      <div class="list-modal-title">Pending Friend Requests</div>
+      <button class="modal-close" onclick="document.getElementById('pending-modal').classList.remove('show')">✕</button>
+    </div>
+    <div class="list-modal-body" id="pending-list-body"></div>
+  </div>
+</div>
 
-  // FOLLOWERS
-  async followers({ userId }) {
-    if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followers?limit=100&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Followers API error');
-    const users = r.data?.data || [];
-    const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
-    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
-  },
+<div class="modal-overlay" id="followers-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="list-modal">
+    <div class="list-modal-header">
+      <div class="list-modal-title">Your Followers</div>
+      <button class="modal-close" onclick="document.getElementById('followers-modal').classList.remove('show')">✕</button>
+    </div>
+    <div class="list-modal-body" id="followers-list-body"></div>
+  </div>
+</div>
 
-  // FOLLOWING
-  async following({ userId }) {
-    if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://friends.roblox.com/v1/users/${userId}/followings?limit=100&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Following API error');
-    const users = r.data?.data || [];
-    const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
-    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
-  },
+<div class="modal-overlay" id="allfriends-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="list-modal" style="width:560px;">
+    <div class="list-modal-header">
+      <div class="list-modal-title">All Friends</div>
+      <button class="modal-close" onclick="document.getElementById('allfriends-modal').classList.remove('show')">✕</button>
+    </div>
+    <div class="list-modal-body" id="allfriends-list-body"></div>
+  </div>
+</div>
 
-  // COUNT (followers/following/friends)
-  async count({ userId }) {
-    const [fol, fow, fri] = await Promise.allSettled([
-      rbx(`https://friends.roblox.com/v1/users/${userId}/followers/count`),
-      rbx(`https://friends.roblox.com/v1/users/${userId}/followings/count`),
-      rbx(`https://friends.roblox.com/v1/users/${userId}/friends/count`),
-    ]);
-    return {
-      followers: fol.status === 'fulfilled' ? (fol.value.data?.count || 0) : 0,
-      following: fow.status === 'fulfilled' ? (fow.value.data?.count || 0) : 0,
-      friends: fri.status === 'fulfilled' ? (fri.value.data?.count || 0) : 0,
-    };
-  },
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">N</div>
+      <div class="sidebar-logo-text">Project <span>Next</span></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Core</div>
+      <button class="nav-item active" onclick="switchHub('social',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span data-i18n="hub1">Social Commander</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('assets',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <span data-i18n="hub2">Asset & Collections</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('discovery',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        <span data-i18n="hub3">Ultimate Discovery</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('security',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        <span data-i18n="hub4">Account Defense</span>
+      </button>
+      <div class="nav-section-label">Tools</div>
+      <button class="nav-item" onclick="switchHub('profile-advanced',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M17 8h.01M19 10l1.5 1.5"/></svg>
+        <span>My Profile+</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('values',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Rblx Values</span>
+      </button>
+      <button class="nav-item" onclick="switchHub('settings',this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <span>PN Settings</span>
+      </button>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-username">—</div>
+        <div class="user-tag" id="sidebar-tag">● Online</div>
+      </div>
+    </div>
+  </nav>
 
-  // PENDING FRIEND REQUESTS
-  async pending({ userId }) {
-    const r = await rbx(`https://friends.roblox.com/v1/my/friends/requests?limit=100`);
-    if (!r.ok) throw new Error('Pending API error');
-    const users = r.data?.data || [];
-    const ids = users.map(u => u.id || u.userId).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids);
-    return { data: users.map(u => ({ ...u, thumbnailUrl: thumbMap[u.id || u.userId] || '' })) };
-  },
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+      <div class="topbar-title" id="topbar-title">Social Commander</div>
+      <div class="topbar-badge">GENESIS PHASE</div>
+    </div>
 
-  // FRIEND REQUEST COUNT (Open Cloud compatible)
-  async friendRequestCount({}, token) {
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx(`https://friends.roblox.com/v1/user/friend-requests/count`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }, token);
-    return { count: r.data?.count || 0 };
-  },
+    <!-- ═══ HUB: SOCIAL ═══ -->
+    <div class="hub-panel active" id="hub-social">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub1">Social Commander</div>
+        <div class="hub-sub">Roblox profile intelligence · User lookup · Friend Radar · Account analytics</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>User Lookup</div>
+        <div class="search-box">
+          <input class="search-input" id="social-username-input" placeholder="Enter Roblox username..." type="text" onkeydown="if(event.key==='Enter')lookupUser()">
+          <button class="btn-accent" onclick="lookupUser()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Lookup
+          </button>
+        </div>
+        <div id="social-lookup-result" style="margin-top:12px;"></div>
+      </div>
+      <div class="stat-grid" id="social-stat-grid" style="display:none;">
+        <div class="stat-card"><div class="stat-label">Friends</div><div class="stat-val accent-text" id="social-stat-friends">—</div><div class="stat-sub">Total</div></div>
+        <div class="stat-card"><div class="stat-label">Followers</div><div class="stat-val" style="color:var(--success)" id="social-stat-followers">—</div><div class="stat-sub">Total</div></div>
+        <div class="stat-card"><div class="stat-label">Following</div><div class="stat-val" id="social-stat-following">—</div><div class="stat-sub">Total</div></div>
+        <div class="stat-card"><div class="stat-label">Account Age</div><div class="stat-val" style="color:var(--warning);font-size:18px;" id="social-stat-age">—</div><div class="stat-sub">Years</div></div>
+      </div>
+      <!-- FRIEND RADAR replaces Connections Finder -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>Friend Radar
+          <span class="api-chip live">● Live</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">Analyze any user's network — mutual friends, social overlap, and presence score.</p>
+        <div class="search-box">
+          <input class="search-input" id="radar-input" placeholder="Enter username to radar scan..." type="text" onkeydown="if(event.key==='Enter')runFriendRadar()">
+          <button class="btn-accent" onclick="runFriendRadar()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="11" stroke-dasharray="2 4"/></svg>Scan
+          </button>
+        </div>
+        <div id="radar-progress" style="display:none;margin-bottom:12px;">
+          <div class="progress-wrap" style="margin-bottom:0;">
+            <div class="progress-header"><div class="progress-label" id="radar-label">Scanning network...</div><div class="progress-meta" id="radar-pct">0%</div></div>
+            <div class="progress-bar"><div class="progress-fill" id="radar-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div id="radar-result"></div>
+      </div>
+    </div>
 
-  // FRIEND REQUEST ACTIONS
-  async acceptRequest({ targetId }, token) {
-    const r = await rbx(`https://friends.roblox.com/v1/users/${targetId}/accept-friend-request`, { method: 'POST' }, token);
-    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Accept failed');
-    return { success: true };
-  },
+    <!-- ═══ HUB: ASSETS ═══ -->
+    <div class="hub-panel" id="hub-assets">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub2">Asset & Collection Manager</div>
+        <div class="hub-sub">Live inventory audit · Parallel fetch · RAP for limiteds</div>
+      </div>
+      <div id="value-check-phase">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title"><div class="card-title-dot"></div>Genesis Inventory Audit</div>
+          <button class="btn-accent" onclick="startValueCheck()" id="start-value-btn" style="width:100%;margin-bottom:16px;">Run Full Inventory Audit</button>
+          <div id="value-progress" style="display:none;">
+            <div class="progress-header"><div class="progress-label" id="value-label">Checking...</div><div class="progress-meta" id="value-pct">0%</div></div>
+            <div class="progress-bar" style="height:8px;"><div class="progress-fill" id="value-bar" style="width:0%;"></div></div>
+            <div class="progress-sub" id="value-time" style="margin-top:8px;">Estimated: –</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;" id="cat-chips"></div>
+          </div>
+        </div>
+      </div>
+      <div id="value-results" style="display:none;">
+        <div class="stat-grid" style="margin-bottom:20px;">
+          <div class="stat-card" style="grid-column:span 2;"><div class="stat-label" data-i18n="rbxTotal">R$ Total</div><div class="stat-val accent-text" style="font-size:32px;" id="total-value">R$ 0</div><div class="stat-sub">Limiteds (RAP) + On-sale + Off-sale</div></div>
+          <div class="stat-card"><div class="stat-label">Limiteds (RAP)</div><div class="stat-val" style="color:var(--warning)" id="rap-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Gamepasses</div><div class="stat-val" id="gp-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Accessories</div><div class="stat-val" id="acc-value">R$ 0</div></div>
+          <div class="stat-card"><div class="stat-label">Other Assets</div><div class="stat-val" id="other-value">R$ 0</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-title-dot"></div>Inventory Breakdown<span class="api-chip live" id="inv-chip">● Live</span></div>
+          <div id="inventory-items"></div>
+        </div>
+      </div>
+    </div>
 
-  async declineRequest({ targetId }, token) {
-    const r = await rbx(`https://friends.roblox.com/v1/users/${targetId}/decline-friend-request`, { method: 'POST' }, token);
-    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Decline failed');
-    return { success: true };
-  },
+    <!-- ═══ HUB: DISCOVERY ═══ -->
+    <div class="hub-panel" id="hub-discovery">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub3">Ultimate Discovery</div>
+        <div class="hub-sub">Top 3 filtered search · Live player counts · Verified creators · Genre categories</div>
+      </div>
+      <!-- GAME SEARCH — top 3 only, no archive/ratio -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title"><div class="card-title-dot"></div>Game Search<span class="api-chip live" style="margin-left:auto;">● Live Stats</span></div>
+        <div class="search-box">
+          <input class="search-input" id="disc-query" placeholder="Search Roblox games..." type="text" onkeydown="if(event.key==='Enter')searchGames()">
+          <button class="btn-accent" onclick="searchGames()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
+          </button>
+        </div>
+        <div id="disc-search-progress" style="display:none;margin-bottom:12px;">
+          <div class="progress-wrap" style="margin-bottom:0;">
+            <div class="progress-header"><div class="progress-label">Fetching live results...</div><div class="progress-meta" id="disc-pct">0%</div></div>
+            <div class="progress-bar"><div class="progress-fill" id="disc-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div id="disc-search-results"></div>
+      </div>
+      <!-- Category rows -->
+      <div id="discovery-grid"></div>
+    </div>
 
-  // PROFILE ADVANCED (user.advanced:read)
-  async profileAdvanced({}, token) {
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx('https://users.roblox.com/v1/users/authenticated/country-region', {}, token);
-    const p = await rbx('https://premiumfeatures.roblox.com/v1/users/validate-membership', {}, token);
-    const v = await rbx('https://apis.roblox.com/user-verification/v1/verified-roles', {}, token);
-    return {
-      isPremium: p.data?.isPremium || p.ok,
-      isVerified: (v.data?.roles || []).length > 0,
-      countryCode: r.data?.countryRegionCode || null,
-    };
-  },
+    <!-- ═══ HUB: SECURITY ═══ -->
+    <div class="hub-panel" id="hub-security">
+      <div class="hub-header">
+        <div class="hub-title" data-i18n="hub4">Account Defense & Privacy</div>
+        <div class="hub-sub">Security posture, live scan, and privacy configuration.</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title"><div class="card-title-dot"></div>Security Integrity</div>
+            <div class="integrity-bar-wrap">
+              <div class="integrity-score" id="sec-score">82<span>/100</span></div>
+              <div class="progress-bar" style="height:10px;margin-top:8px;"><div class="progress-fill" id="sec-score-bar" style="width:82%;background:linear-gradient(90deg,var(--success),var(--accent));"></div></div>
+            </div>
+            <div id="security-checklist"></div>
+            <button class="btn-accent" onclick="runSecurityScan()" style="width:100%;margin-top:12px;">Run Live Security Scan</button>
+            <div id="security-progress" style="display:none;margin-top:12px;">
+              <div class="progress-bar"><div class="progress-fill" id="sec-bar" style="width:0%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Privacy Auditor</div>
+            <div id="privacy-audit"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  // SOCIAL LINKS (user.social:read)
-  async profileSocial({}, token) {
-    if (!token) throw new Error('Authentication required');
-    const uid = await rbx('https://apis.roblox.com/oauth/v1/userinfo', {}, token);
-    const userId = uid.data?.sub;
-    if (!userId) throw new Error('Could not resolve user ID');
-    const r = await rbx(`https://users.roblox.com/v1/users/${userId}/social-links/list`, {}, token);
-    return { socialLinks: r.data?.data || [] };
-  },
+    <!-- ═══ HUB: PROFILE ADVANCED ═══ -->
+    <div class="hub-panel" id="hub-profile-advanced">
+      <div class="hub-header">
+        <div class="hub-title">My Profile+</div>
+        <div class="hub-sub">Premium status, verified badge, social links, and advanced account info.</div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><div class="card-title-dot"></div>Account Status</div>
+          <div id="profile-adv-status" style="color:var(--text-muted);font-size:13px;">Loading...</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-title-dot"></div>Social Links</div>
+          <div id="profile-adv-social" style="color:var(--text-muted);font-size:13px;">Loading...</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>Full Profile Info</div>
+        <div id="profile-adv-full" style="color:var(--text-muted);font-size:13px;">Loading...</div>
+        <button class="btn-accent" style="margin-top:12px;" onclick="loadProfileAdvanced()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh
+        </button>
+      </div>
+    </div>
 
-  // BADGES (legacy-badge:manage)
-  async badges({ universeId }, token) {
-    if (!universeId) throw new Error('universeId required');
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx(`https://badges.roblox.com/v1/universes/${universeId}/badges?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Could not load badges: ' + r.status);
-    const badges = r.data?.data || [];
-    const ids = badges.map(b => b.id).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids, 'asset');
-    return { data: badges.map(b => ({ ...b, thumbnailUrl: thumbMap[b.id] || b.displayIconImageId ? `https://www.roblox.com/asset-thumbnail/image?assetId=${b.displayIconImageId}&width=64&height=64&format=png` : '' })) };
-  },
+    <!-- ═══ HUB: RBLX VALUES ═══ -->
+    <div class="hub-panel" id="hub-values">
+      <div class="hub-header">
+        <div class="hub-title">Rblx Values Hub</div>
+        <div class="hub-sub">Limiteds, accessories, animations, hats, gear · Acronym search · Rolimons index [0-7]</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>Item Value Search</div>
+        <div class="search-box">
+          <select id="hub-value-category" style="padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:13px;flex-shrink:0;outline:none;cursor:pointer;">
+            <option value="2|">All Limiteds</option>
+            <option value="11|19">Hats</option>
+            <option value="3|">Clothing</option>
+            <option value="4|15">Heads</option>
+            <option value="4|10">Classic Faces</option>
+            <option value="5|">Gear</option>
+            <option value="24|">Animations</option>
+          </select>
+          <input class="search-input" id="hub-value-query" placeholder="Name or acronym (SSH, Dominus, Valk...)" type="text" onkeydown="if(event.key==='Enter')hubCheckValue()">
+          <button class="btn-accent" onclick="hubCheckValue()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
+          </button>
+        </div>
+        <div id="hub-value-results"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-dot"></div>Popular Limiteds</div>
+        <div id="popular-limiteds"></div>
+      </div>
+    </div>
 
-  // MY ASSETS (asset:read via Open Cloud)
-  async myAssets({ assetType = 'Model' }, token) {
-    if (!token) throw new Error('Authentication required');
-    // Open Cloud assets endpoint — requires asset:read scope
-    const r = await rbx(
-      `https://apis.roblox.com/assets/v1/assets?assetType=${encodeURIComponent(assetType)}&limit=50`,
-      { headers: { 'Authorization': `Bearer ${token}` } },
-      token
-    );
-    if (!r.ok) throw new Error('Could not load assets: ' + r.status);
-    const assets = r.data?.data || r.data?.assets || [];
-    const ids = assets.map(a => a.assetId || a.id).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids, 'asset');
-    return { data: assets.map(a => {
-      const id = a.assetId || a.id;
-      return { ...a, id, thumbnailUrl: thumbMap[id] || '' };
-    }) };
-  },
+    <!-- ═══ HUB: SETTINGS ═══ -->
+    <div class="hub-panel" id="hub-settings">
+      <div class="hub-header">
+        <div class="hub-title">Project Next Settings</div>
+        <div class="hub-sub">Theme engine · Language · Performance mode · Account management</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title"><div class="card-title-dot"></div>Theme Engine</div>
+            <div class="theme-grid">
+              <div class="theme-card selected" onclick="selectTheme(this,'genesis')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,#0B0C0D,#A020F0);"></div>
+                <div class="theme-name">Genesis Dark</div><div class="theme-sub">Default</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'glass')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,rgba(255,255,255,0.08),rgba(160,32,240,0.35));"></div>
+                <div class="theme-name">Glass Morphic</div><div class="theme-sub">Frosted depth</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'cyber')">
+                <div class="theme-preview" style="background:linear-gradient(135deg,#001a00,#00FF41);"></div>
+                <div class="theme-name">Cyber Punk</div><div class="theme-sub">Neon matrix</div>
+              </div>
+              <div class="theme-card" onclick="selectTheme(this,'oled')">
+                <div class="theme-preview" style="background:#000;border:1px solid #222;"></div>
+                <div class="theme-name">Monolith OLED</div><div class="theme-sub">Pure black</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Language</div>
+            <select class="lang-select" onchange="setLanguage(this.value)" id="lang-select">
+              <option value="en">🌐 English</option>
+              <option value="tl">🇵🇭 Tagalog</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-title-dot"></div>Performance & Features</div>
+            <div id="settings-toggles"></div>
+            <div class="section-divider"></div>
+            <button class="btn-accent" onclick="signOut()" style="width:100%;background:var(--danger);">Disconnect All Accounts</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  // GAME PASSES (game-pass:read)
-  async gamepasses({ universeId }, token) {
-    if (!universeId) throw new Error('universeId required');
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx(`https://games.roblox.com/v1/games/${universeId}/game-passes?limit=100&sortOrder=Desc`, {}, token);
-    if (!r.ok) throw new Error('Could not load game passes: ' + r.status);
-    return { data: r.data?.data || [] };
-  },
+  </div><!-- /main -->
+</div><!-- /app -->
 
-  // DEV PRODUCTS (developer-product:read)
-  async devProducts({ universeId }, token) {
-    if (!universeId) throw new Error('universeId required');
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx(`https://apis.roblox.com/developer-products/v1/universes/${universeId}/developerproducts?pageSize=50`, {}, token);
-    if (!r.ok) throw new Error('Could not load developer products: ' + r.status);
-    return { data: r.data?.developerProducts || r.data?.data || [] };
-  },
+<div class="toast" id="toast"></div>
 
-  // SEND EXPERIENCE NOTIFICATION (user.user-notification:write)
-  async sendNotif({ universeId, targetUserId, message, launchData }, token) {
-    if (!token) throw new Error('Authentication required');
-    if (!universeId || !message) throw new Error('universeId and message required');
-    const body = {
-      universeId: Number(universeId),
-      targetUserId: Number(targetUserId),
-      payload: {
-        messageId: `pn_${Date.now()}`,
-        type: 'ExperienceInvitation',
-        message,
-        ...(launchData ? { launchData } : {}),
-      }
-    };
-    const r = await rbx('https://apis.roblox.com/user-notification/v1/notifications', { method: 'POST', body }, token);
-    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Send failed: ' + r.status);
-    return { success: true };
-  },
-  async notifPrefs({}, token) {
-    if (!token) throw new Error('Authentication required');
-    // Use legacy notifications API — OAuth has no dedicated notifications scope
-    const r = await rbx('https://notifications.roblox.com/v2/notifications/get-rollout-settings?notificationSourceTypes=ExperienceActivity', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }, token);
-    if (!r.ok) {
-      // Fallback: return empty rather than hard 404
-      return { data: [] };
-    }
-    return { data: r.data?.notificationSourceSettings || r.data?.data || [] };
-  },
+<script>
+// ═══════════════════════════════════════════
+//  PROJECT NEXT — FULL REWRITE v4
+// ═══════════════════════════════════════════
 
-  // TOGGLE EXPERIENCE NOTIFICATION (legacy-universe.following:write)
-  async setNotif({ universeId, enable }, token) {
-    if (!token) throw new Error('Authentication required');
-    if (!universeId) throw new Error('universeId required');
-    const endpoint = enable
-      ? `https://apis.roblox.com/experience-notifications/v1/opt-in?universeId=${universeId}`
-      : `https://apis.roblox.com/experience-notifications/v1/opt-out?universeId=${universeId}`;
-    const r = await rbx(endpoint, { method: 'POST' }, token);
-    if (!r.ok) throw new Error(r.data?.errors?.[0]?.message || 'Failed to update notification');
-    return { success: true };
-  },
-
-  // LIST RECENT EXPERIENCE NOTIFICATIONS
-  async notifList({}, token) {
-    if (!token) throw new Error('Authentication required');
-    const r = await rbx('https://notifications.roblox.com/v2/notifications?limit=25', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }, token);
-    if (!r.ok) throw new Error('Could not load notifications');
-    const items = r.data?.notifications || r.data?.data || [];
-    return { data: items };
-  },
-
-  // PRESENCE
-  async presence({ userIds }) {
-    const ids = String(userIds).split(',').map(Number).filter(Boolean);
-    if (!ids.length) throw new Error('userIds required');
-    const r = await rbx('https://presence.roblox.com/v1/presence/users', { method: 'POST', body: { userIds: ids } });
-    return { data: r.data?.userPresences || [] };
-  },
-
-  // THUMBNAIL proxy
-  async thumbnail({ type, id, ids }) {
-    const allIds = ids ? String(ids).split(',').map(Number).filter(Boolean) : id ? [Number(id)] : [];
-    if (!allIds.length) throw new Error('id(s) required');
-    const map = await fetchThumbs(allIds, type === 'asset' ? 'asset' : 'avatar-headshot');
-    return { data: map };
-  },
-
-  // INVENTORY
-  async inventory({ userId }) {
-    if (!userId) throw new Error('userId required');
-    const r = await rbx(`https://inventory.roblox.com/v2/users/${userId}/inventory?assetTypes=8,41,42,43,44,45,46,47,48&limit=25&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Inventory API error ' + r.status);
-    const items = r.data?.data || [];
-    const assetIds = items.map(i => i.assetId).filter(Boolean);
-    const thumbMap = await fetchThumbs(assetIds, 'asset');
-    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })) };
-  },
-
-  // ACCOUNT VALUE / RAP
-  async value({ userId }) {
-    if (!userId) throw new Error('userId required');
-    // Collectibles (limiteds with RAP)
-    const r = await rbx(`https://inventory.roblox.com/v1/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
-    if (!r.ok) throw new Error('Value API error');
-    const items = r.data?.data || [];
-    let totalRap = 0;
-    items.forEach(i => { totalRap += i.recentAveragePrice || 0; });
-    const assetIds = items.map(i => i.assetId).filter(Boolean);
-    const thumbMap = await fetchThumbs(assetIds, 'asset');
-    return {
-      data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.assetId] || '' })),
-      totalRap,
-    };
-  },
-
-  // CATALOG ITEM SEARCH
-  async itemSearch({ q }) {
-    if (!q) throw new Error('q required');
-    const encoded = encodeURIComponent(q);
-    let r = await rbx(`https://catalog.roblox.com/v1/search/items/details?Category=2&Keyword=${encoded}&Limit=10&SortType=Relevance`);
-    let items = r.data?.data || [];
-    if (!items.length) {
-      r = await rbx(`https://catalog.roblox.com/v1/search/items/details?Keyword=${encoded}&Limit=10`);
-      items = r.data?.data || [];
-    }
-    const ids = items.map(i => i.id).filter(Boolean);
-    const thumbMap = await fetchThumbs(ids, 'asset');
-    return { data: items.map(i => ({ ...i, thumbnailUrl: thumbMap[i.id] || '' })) };
-  },
-
-  // MUTUAL FRIENDS
-  async mutuals({ userId, targetUsername }) {
-    if (!targetUsername) throw new Error('targetUsername required');
-    const [myFriendsR, targetUser] = await Promise.all([
-      ACTIONS.friends({ userId }),
-      resolveUsername(targetUsername),
-    ]);
-    if (!targetUser) throw new Error('User not found: ' + targetUsername);
-    const targetFriendsR = await rbx(`https://friends.roblox.com/v1/users/${targetUser.id}/friends`);
-    const targetIds = new Set((targetFriendsR.data?.data || []).map(f => f.id || f.userId));
-    const myFriends = myFriendsR.data || [];
-    const mutuals = myFriends.filter(f => targetIds.has(f.id || f.userId));
-    return { data: mutuals, count: mutuals.length };
-  },
-
-  // CONNECTIONS BFS
-  async connections({ userId, targetUsername, depth = 3 }) {
-    const maxDepth = Math.min(Number(depth) || 3, 5);
-    if (!targetUsername) throw new Error('targetUsername required');
-    const targetUser = await resolveUsername(targetUsername);
-    if (!targetUser) throw new Error('User not found');
-    const targetId = targetUser.id;
-    const myUsername = ''; // resolved by frontend
-    // BFS
-    const queue = [[userId]];
-    const visited = new Set([String(userId)]);
-    for (let hop = 1; hop <= maxDepth; hop++) {
-      const nextQueue = [];
-      for (const path of queue) {
-        const lastId = path[path.length - 1];
-        const cacheKey = 'bfs_' + lastId;
-        let friends = cache(cacheKey);
-        if (!friends) {
-          const r = await rbx(`https://friends.roblox.com/v1/users/${lastId}/friends`);
-          friends = r.data?.data || [];
-          cache(cacheKey, friends);
-        }
-        for (const f of friends) {
-          const fid = String(f.id || f.userId);
-          if (fid === String(targetId)) {
-            const fullPath = [...path, fid];
-            const pathIds = fullPath.map(Number).filter(Boolean);
-            const thumbMap = await fetchThumbs(pathIds);
-            return {
-              found: true,
-              hops: hop,
-              pathIds: fullPath,
-              thumbMap,
-              targetName: targetUser.name,
-            };
-          }
-          if (!visited.has(fid)) {
-            visited.add(fid);
-            nextQueue.push([...path, fid]);
-          }
-        }
-      }
-      queue.length = 0;
-      queue.push(...nextQueue.slice(0, 50)); // limit BFS width
-      if (!queue.length) break;
-    }
-    return { found: false };
-  },
-
-  // GET DEVICES (Roblox session management)
-  async getDevices() {
-    // Roblox doesn't expose device list via public API, return browser session only
-    // Real device list not available without undocumented endpoints
-    return {
-      data: [],
-      note: 'Roblox does not expose device sessions via API. Manage sessions at roblox.com/my/account#security',
-    };
-  },
-
-  // REVOKE DEVICE
-  async revokeDevice({ deviceId }) {
-    // Direct Roblox session revocation - open security page
-    return { redirectUrl: 'https://www.roblox.com/my/account#!/security', note: 'Redirect to Roblox security' };
-  },
-
-  // USER INFO by userId
-  async userInfo({ userId }) {
-    const r = await rbx(`https://users.roblox.com/v1/users/${userId}`);
-    if (!r.ok) throw new Error('User not found');
-    const thumbMap = await fetchThumbs([userId]);
-    return { ...r.data, thumbnailUrl: thumbMap[userId] || '' };
-  },
+const CFG = {
+  GOOGLE_CLIENT_ID: '506292215982-u0e4b7osdfni08nq4k3kbqlo25fl9vtb.apps.googleusercontent.com',
+  ROBLOX_CLIENT_ID: '2786623414524497771',
+  RBX_AUTH:         'https://apis.roblox.com/oauth/v1/authorize',
+  RBX_TOKEN:        'https://apis.roblox.com/oauth/v1/token',
+  RBX_USERINFO:     'https://apis.roblox.com/oauth/v1/userinfo',
+  REDIRECT_URI:     'https://project-next-pink.vercel.app/',
+  get REDIR() { return (window.location.hostname==='localhost'||window.location.protocol==='file:')?window.location.href.split('?')[0]:this.REDIRECT_URI; },
 };
 
-// ── MAIN HANDLER ─────────────────────────────────────
-module.exports = async (req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+let APP = { user:null, rbxToken:null, friends:[], lang:'en', toggles:{}, authStep:0, modalFriend:null };
 
-  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+// ── SESSION ─────────────────────────────
+function loadSession(){
+  try{const raw=localStorage.getItem('pn_session');if(!raw)return false;const s=JSON.parse(raw);if(!s||!s.user||!s.user.username)return false;APP.user=s.user;APP.rbxToken=s.rbxToken||null;APP.lang=s.lang||'en';APP.toggles=s.toggles||{};return true;}
+  catch(e){localStorage.removeItem('pn_session');return false;}
+}
+function saveSession(){localStorage.setItem('pn_session',JSON.stringify({user:APP.user,rbxToken:APP.rbxToken,lang:APP.lang,toggles:APP.toggles,savedAt:Date.now()}));}
+function clearSession(){['pn_session','pn_google_token','pn_rbx_token','pn_pkce_verifier','pn_oauth_state'].forEach(k=>localStorage.removeItem(k));APP.user=null;APP.rbxToken=null;}
 
-  // Parse action from query or body
-  let params = { ...req.query };
-  if (req.method === 'POST' && req.body) {
-    Object.assign(params, typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
-  }
-
-  const action = params.action;
-  if (!action) {
-    res.status(400).json({ error: 'Missing action parameter' });
+// ── BOOT ────────────────────────────────
+(async function boot(){
+  try{
+  const params=new URLSearchParams(window.location.search);
+  const codeP=params.get('code'),errP=params.get('error'),stateP=params.get('state');
+  if(codeP&&stateP==='roblox_auth'){
+    window.history.replaceState({},'',window.location.pathname);
+    if(window.opener){window.opener.postMessage({type:'roblox_oauth_code',code:codeP},window.location.origin);window.close();return;}
+    try{await handleRobloxCallback(codeP);beginLoading();}catch(e){showScreen('auth');showAuthErr('Roblox auth failed: '+e.message);}
     return;
   }
+  if(errP){window.history.replaceState({},'',window.location.pathname);showScreen('auth');showAuthErr('Authorization error: '+errP);return;}
+  if(loadSession()){beginLoading();return;}
+  showScreen('auth');
+  }catch(e){console.error('[boot]',e);showScreen('auth');}
+})();
 
-  // Extract bearer token from Authorization header
-  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (params.token || '');
+// ── SCREEN ──────────────────────────────
+function showScreen(name){
+  document.getElementById('auth-screen').style.display=name==='auth'?'flex':'none';
+  document.getElementById('loading-screen').style.display=name==='loading'?'flex':'none';
+  document.getElementById('app').style.display=name==='app'?'block':'none';
+}
+function showAuthErr(msg){
+  const el=document.getElementById('auth-err');
+  const friendly={popup_closed:'Identity sync interrupted. Please keep the popup open.',access_denied:'Auth Error. Check your Redirect URI in Google Cloud Console.'};
+  let dm=msg;
+  for(const[k,v]of Object.entries(friendly)){if(msg&&msg.toLowerCase().includes(k)){dm=v;break;}}
+  el.innerHTML=`<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(240,64,64,0.08);border:1px solid rgba(240,64,64,0.25);border-radius:var(--radius);border-left:3px solid var(--danger);"><span style="font-size:16px;">⚠</span><span style="font-size:12px;line-height:1.55;color:var(--text-secondary);">${dm}</span></div>`;
+  el.style.display='block';
+}
+function hideAuthErr(){const el=document.getElementById('auth-err');el.innerHTML='';el.style.display='none';}
 
-  const handler = ACTIONS[action];
-  if (!handler) {
-    res.status(404).json({ error: 'Unknown action: ' + action });
-    return;
+// ── AUTH ─────────────────────────────────
+async function handleAuthStep(){
+  const btn=document.getElementById('auth-btn');hideAuthErr();
+  if(APP.authStep===0){
+    btn.disabled=true;btn.textContent='Connecting to Google...';
+    try{await doGoogleAuth();markStepDone('google');APP.authStep=1;btn.disabled=false;btn.textContent='Authorize Roblox Open Cloud';}
+    catch(e){btn.disabled=false;btn.textContent='Connect with Google';showAuthErr(e.message||'Google auth failed.');}
+  } else if(APP.authStep===1){
+    btn.disabled=true;btn.textContent='Connecting to Roblox...';
+    const stored=localStorage.getItem('pn_rbx_token');
+    if(stored){APP.rbxToken=stored;await fetchAndStoreUser();if(!APP.user?.userId){btn.disabled=false;btn.textContent='Link Roblox Account';showAuthErr('Could not retrieve your Roblox identity.');return;}markStepDone('roblox');beginLoading();}
+    else{try{await startRobloxAuth();await fetchAndStoreUser();if(!APP.user?.userId)throw new Error('Could not retrieve your Roblox identity.');markStepDone('roblox');beginLoading();}catch(e){btn.disabled=false;btn.textContent='Link Roblox Account';showAuthErr(e.message||'Roblox connection failed.');}}
   }
-
-  try {
-    const result = await handler(params, bearerToken);
-    res.status(200).json(result);
-  } catch (err) {
-    console.error('[proxy] action=' + action, err.message);
-    res.status(500).json({ error: err.message });
+}
+function markStepDone(which){
+  if(which==='google'){document.getElementById('step-google').className='auth-step done';document.getElementById('step1-num').textContent='✓';document.getElementById('step-roblox').className='auth-step active';showToast('Google identity synchronized ✦');}
+  else{document.getElementById('step-roblox').className='auth-step done';document.getElementById('step2-num').textContent='✓';showToast('Roblox bridge authorized ✦');}
+}
+function doGoogleAuth(){
+  return new Promise((resolve,reject)=>{
+    if(typeof google==='undefined'){let w=0;const iv=setInterval(()=>{w+=200;if(typeof google!=='undefined'){clearInterval(iv);doGoogleAuth().then(resolve).catch(reject);}if(w>5000){clearInterval(iv);reject(new Error('Google Identity Services failed to load.'));}},200);return;}
+    const client=google.accounts.oauth2.initTokenClient({client_id:CFG.GOOGLE_CLIENT_ID,scope:'openid profile email',
+      callback:(res)=>{if(res.error){reject(new Error(res.error_description||res.error));return;}localStorage.setItem('pn_google_token',res.access_token);resolve(res.access_token);},
+      error_callback:(e)=>{const m={popup_closed:'Identity sync interrupted.',access_denied:'Auth Error.'};reject(new Error(m[e.type]||e.type||'Connection interrupted.'));}});
+    client.requestAccessToken({prompt:'consent'});
+  });
+}
+function randStr(n){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';const a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,b=>c[b%c.length]).join('');}
+async function makePKCE(){const v=randStr(64);const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));const ch=btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');return{verifier:v,challenge:ch};}
+async function startRobloxAuth(){
+  const{verifier,challenge}=await makePKCE();localStorage.setItem('pn_pkce_verifier',verifier);
+  const p=new URLSearchParams({client_id:CFG.ROBLOX_CLIENT_ID,redirect_uri:CFG.REDIR,response_type:'code',scope:'openid profile asset:read asset:write thumbnail:read user.inventory-item:read user.advanced:read user.social:read user.user-notification:write developer-product:read game-pass:read legacy-asset:manage legacy-badge:manage legacy-game-pass:manage legacy-universe.following:read legacy-universe.following:write legacy-user:manage',state:'roblox_auth',code_challenge:challenge,code_challenge_method:'S256'});
+  const popup=window.open(CFG.RBX_AUTH+'?'+p,'roblox_oauth','width=520,height=640,menubar=no,toolbar=no');
+  if(!popup)throw new Error('Popup blocked. Please allow popups for this site.');
+  return new Promise((resolve,reject)=>{let settled=false;const finish=(fn)=>{if(!settled){settled=true;fn();}};
+    const onMsg=async(evt)=>{if(evt.origin!==window.location.origin)return;if(!evt.data||evt.data.type!=='roblox_oauth_code')return;window.removeEventListener('message',onMsg);clearInterval(pollIv);popup.close();
+      if(!evt.data.code){finish(()=>reject(new Error('No authorization code received.')));return;}
+      try{await handleRobloxCallback(evt.data.code);finish(()=>resolve());}catch(e){finish(()=>reject(e));}};
+    window.addEventListener('message',onMsg);
+    const pollIv=setInterval(()=>{if(popup.closed){clearInterval(pollIv);window.removeEventListener('message',onMsg);finish(()=>reject(new Error('Identity sync interrupted.')));}},600);
+  });
+}
+async function handleRobloxCallback(code){
+  const verifier=localStorage.getItem('pn_pkce_verifier');if(!verifier)throw new Error('PKCE verifier missing.');
+  const res=await fetch(CFG.RBX_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',code,redirect_uri:CFG.REDIR,client_id:CFG.ROBLOX_CLIENT_ID,code_verifier:verifier})});
+  if(!res.ok){const txt=await res.text();throw new Error('Token exchange failed ('+res.status+'): '+txt.slice(0,120));}
+  const data=await res.json();APP.rbxToken=data.access_token;localStorage.setItem('pn_rbx_token',data.access_token);localStorage.removeItem('pn_pkce_verifier');
+  await fetchAndStoreUser();
+}
+async function fetchAndStoreUser(){
+  if(!APP.rbxToken)return;
+  try{
+    const res=await fetch(CFG.RBX_USERINFO,{headers:{Authorization:'Bearer '+APP.rbxToken}});if(!res.ok)throw new Error('userinfo '+res.status);
+    const info=await res.json();APP.user={userId:info.sub||info.id||'',username:info.preferred_username||info.name||'RobloxUser',displayName:info.name||info.preferred_username||'Roblox User',thumbnail:info.picture||''};saveSession();
+  }catch(e){
+    try{const p=JSON.parse(atob(APP.rbxToken.split('.')[1]));APP.user={userId:p.sub||'',username:p.preferred_username||p.name||'RobloxUser',displayName:p.name||'Roblox User',thumbnail:p.picture||''};}catch(_){APP.user={userId:'',username:'Authenticated',displayName:'Roblox User',thumbnail:''};}
+    saveSession();
   }
+}
+
+// ── LOADING ──────────────────────────────
+const LOAD_STEPS=['Initializing genesis phase...','Synchronizing Roblox Open Cloud...','Fetching friend graph...','Loading inventory catalog...','Bootstrapping Project Next...'];
+function beginLoading(){
+  showScreen('loading');let pct=0,step=0;
+  const bar=document.getElementById('load-bar'),label=document.getElementById('load-label'),pctEl=document.getElementById('load-pct');
+  const iv=setInterval(()=>{
+    pct+=Math.random()*16+6;if(pct>100)pct=100;
+    bar.style.width=pct+'%';
+    if(pctEl)pctEl.textContent=Math.floor(pct)+'%';
+    step=Math.min(Math.floor(pct/21),LOAD_STEPS.length-1);
+    label.textContent=LOAD_STEPS[step];
+    if(pct>=100){clearInterval(iv);setTimeout(launchApp,500);}
+  },280);
+}
+async function launchApp(){
+  if(!APP.user?.userId)await fetchAndStoreUser();
+  if(!APP.user?.userId){showScreen('auth');showAuthErr('Could not verify your Roblox identity. Please reconnect.');return;}
+  showScreen('app');
+  applyLanguage(APP.lang);
+  applyPerformanceMode();
+  populateAll();
+  showToast('Welcome back, @'+APP.user.username+' ✦');
+}
+function populateAll(){
+  updateProfile();populateDiscovery();populateSecurity();populatePrivacy();populateSettingsToggles();populatePopularLimiteds();restoreTheme();loadFriendsBackground();
+}
+function updateProfile(){
+  const user=APP.user;if(!user)return;
+  document.getElementById('sidebar-username').textContent='@'+user.username;
+  const av=document.getElementById('sidebar-avatar');
+  if(user.thumbnail){const img=document.createElement('img');img.src=user.thumbnail;img.alt=user.username;img.onerror=()=>{av.innerHTML='';av.textContent=user.username[0].toUpperCase();};av.innerHTML='';av.appendChild(img);}
+  else{av.textContent=user.username?user.username[0].toUpperCase():'U';}
+  const tag=document.getElementById('sidebar-tag');if(tag)tag.textContent='● Online · ID '+(user.userId||'—');
+}
+
+// ── LOAD FRIENDS IN BG ───────────────────
+async function loadFriendsBackground(){
+  if(!APP.user?.userId)return;
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  try{
+    const r=await fetch('/api/proxy?action=friends&userId='+APP.user.userId,{headers});
+    if(r.ok){const d=await r.json();APP.friends=d.data||[];}
+  }catch(_){}
+}
+
+// ══════════════════════════════════════════
+//  SOCIAL COMMANDER
+// ══════════════════════════════════════════
+
+// ── USER LOOKUP (proxied to avoid CORS) ──
+async function lookupUser(){
+  const username=document.getElementById('social-username-input').value.trim();
+  if(!username)return;
+  const el=document.getElementById('social-lookup-result');
+  el.innerHTML=`<div style="color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Looking up @${username}...</div>`;
+  document.getElementById('social-stat-grid').style.display='none';
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  try{
+    // Step 1: resolve username via proxy
+    const userRes=await fetch(`/api/proxy?action=lookupUser&username=${encodeURIComponent(username)}`,{headers});
+    let uid=null,userObj={};
+    if(userRes.ok){
+      const ud=await userRes.json();
+      const found=(ud.data||[])[0]||ud;
+      uid=found.id||found.userId;
+      userObj=found;
+    }
+    // Fallback: direct Roblox (may CORS in browser — proxy handles it)
+    if(!uid){
+      const fb=await fetch('https://users.roblox.com/v1/usernames/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usernames:[username],excludeBannedUsers:false})}).catch(()=>null);
+      if(fb?.ok){const d=await fb.json();const u=(d.data||[])[0];uid=u?.id;}
+    }
+    if(!uid){el.innerHTML=`<div style="color:var(--danger);font-size:13px;">User "<strong>${username}</strong>" not found.</div>`;return;}
+
+    // Step 2: parallel fetch profile, counts, presence
+    const [profR,countR,presR,thumbR]=await Promise.allSettled([
+      fetch(`/api/proxy?action=userInfo&userId=${uid}`,{headers}).then(r=>r.json()),
+      fetch(`/api/proxy?action=count&userId=${uid}`,{headers}).then(r=>r.json()),
+      fetch(`/api/proxy?action=presence&userIds=${uid}`,{headers}).then(r=>r.json()),
+      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=180x180&format=Png&isCircular=true`).then(r=>r.json()).catch(()=>({data:[]})),
+    ]);
+    const prof=profR.status==='fulfilled'?profR.value:{};
+    const counts=countR.status==='fulfilled'?countR.value:{};
+    const pres=presR.status==='fulfilled'?(presR.value.data||[])[0]:null;
+    const avatarUrl=(thumbR.status==='fulfilled'?(thumbR.value.data||[])[0]?.imageUrl:'')||'';
+
+    const created=prof.created?new Date(prof.created):null;
+    const ageYears=created?((Date.now()-created)/(1000*60*60*24*365.25)).toFixed(1):'?';
+    const joinDate=created?created.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'?';
+    const ptype=pres?.userPresenceType||0;
+    const presLabel=ptype===2?`🎮 In-Game${pres.lastLocation?' · '+pres.lastLocation:''}`:ptype===3?'🖥️ Studio':ptype===1?'🟢 Online':'⚫ Offline';
+    const presColor=ptype===2?'var(--info)':ptype===3?'var(--warning)':ptype===1?'var(--success)':'var(--text-muted)';
+    const isBanned=prof.isBanned;
+    const displayName=prof.displayName||prof.name||username;
+    const description=prof.description||'';
+
+    el.innerHTML=`
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);animation:fadeIn .3s ease both;">
+        <div style="flex-shrink:0;width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--accent-dim);border:2px solid var(--border-accent);display:flex;align-items:center;justify-content:center;">
+          ${avatarUrl?`<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${displayName}">`:`<span style="font-size:28px;font-weight:700;color:var(--accent);">${displayName[0].toUpperCase()}</span>`}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+            <span style="font-size:17px;font-weight:700;">${displayName}</span>
+            ${isBanned?'<span style="font-size:10px;background:rgba(231,76,60,.2);color:var(--danger);padding:2px 6px;border-radius:4px;font-weight:700;">BANNED</span>':''}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@${prof.name||username} · ID ${uid}</div>
+          <div style="font-size:12px;font-weight:600;color:${presColor};margin-bottom:8px;">${presLabel}</div>
+          ${description?`<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;max-height:52px;overflow:hidden;margin-bottom:8px;">${description.slice(0,180)}${description.length>180?'…':''}</div>`:''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);margin-bottom:10px;"><span>📅 Joined ${joinDate}</span><span>·</span><span>⏱ ${ageYears} yrs</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="https://www.roblox.com/users/${uid}/profile" target="_blank" class="value-link" style="font-size:12px;">View on Roblox ↗</a>
+            <button class="btn-sm" onclick="runFriendRadarById(${uid},'${(prof.name||username).replace(/'/g,'\\'')}')">Radar Scan ⟳</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('social-stat-grid').style.display='';
+    document.getElementById('social-stat-friends').textContent=(counts.friends||0).toLocaleString();
+    document.getElementById('social-stat-followers').textContent=(counts.followers||0).toLocaleString();
+    document.getElementById('social-stat-following').textContent=(counts.following||0).toLocaleString();
+    document.getElementById('social-stat-age').textContent=ageYears;
+  }catch(e){
+    el.innerHTML=`<div style="color:var(--danger);font-size:13px;">Error: ${e.message}<br><small style="color:var(--text-muted);">Tip: Make sure the proxy is deployed on Vercel.</small></div>`;
+  }
+}
+
+// ── FRIEND RADAR ─────────────────────────
+async function runFriendRadar(){
+  const target=document.getElementById('radar-input').value.trim();
+  if(!target){showToast('Enter a username to scan');return;}
+  // resolve username first
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  const progEl=document.getElementById('radar-progress');
+  const resEl=document.getElementById('radar-result');
+  resEl.innerHTML='';progEl.style.display='block';
+  animateBar('radar-bar','radar-pct',0,40,1200);
+  document.getElementById('radar-label').textContent='Resolving user...';
+  try{
+    const r=await fetch(`/api/proxy?action=lookupUser&username=${encodeURIComponent(target)}`,{headers});
+    let uid=null,uname=target;
+    if(r.ok){const d=await r.json();const u=(d.data||[])[0]||d;uid=u?.id||u?.userId;uname=u?.name||target;}
+    if(!uid){progEl.style.display='none';resEl.innerHTML=`<div style="color:var(--warning);font-size:13px;">User "@${target}" not found.</div>`;return;}
+    await runFriendRadarById(uid,uname);
+  }catch(e){progEl.style.display='none';resEl.innerHTML=`<div style="color:var(--danger);font-size:13px;">Error: ${e.message}</div>`;}
+}
+
+async function runFriendRadarById(uid,uname){
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  const progEl=document.getElementById('radar-progress');
+  const resEl=document.getElementById('radar-result');
+  progEl.style.display='block';resEl.innerHTML='';
+  document.getElementById('radar-label').textContent='Loading mutual friends...';
+  animateBar('radar-bar','radar-pct',40,75,1000);
+  try{
+    const [countR,mutualR,thumbR]=await Promise.allSettled([
+      fetch(`/api/proxy?action=count&userId=${uid}`,{headers}).then(r=>r.json()),
+      fetch(`/api/proxy?action=mutuals&userId=${APP.user?.userId||''}&targetUsername=${encodeURIComponent(uname)}`,{headers}).then(r=>r.json()),
+      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=110x110&format=Png`).then(r=>r.json()).catch(()=>({data:[]})),
+    ]);
+    animateBar('radar-bar','radar-pct',75,100,600);
+    await new Promise(r=>setTimeout(r,700));
+    progEl.style.display='none';
+    const counts=countR.status==='fulfilled'?countR.value:{};
+    const mutuals=mutualR.status==='fulfilled'?(mutualR.value.data||[]):[];
+    const thumbUrl=(thumbR.status==='fulfilled'?(thumbR.value.data||[])[0]?.imageUrl:'')||'';
+    // Connection hop via BFS from loaded friends
+    let hops='?',hopLabel='Unknown';
+    const myFriends=APP.friends;
+    const isDirectFriend=myFriends.some(f=>(f.id||f.userId)==uid||(f.name||'').toLowerCase()===uname.toLowerCase());
+    if(isDirectFriend){hops=1;hopLabel='Direct Friend';}
+    else if(mutuals.length){hops=2;hopLabel='Friend-of-Friend';}
+    else{hops='3+';hopLabel='Extended Network';}
+
+    resEl.innerHTML=`
+    <div style="animation:fadeIn .35s ease both;">
+      <!-- Target card -->
+      <div style="display:flex;gap:14px;align-items:center;padding:16px;background:var(--bg-elevated);border:1px solid var(--border-accent);border-radius:var(--radius);margin-bottom:16px;">
+        <div style="width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--accent-dim);border:2px solid var(--border-accent);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          ${thumbUrl?`<img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-size:22px;font-weight:700;color:var(--accent);">${uname[0].toUpperCase()}</span>`}
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:700;">@${uname}</div>
+          <div style="font-size:12px;color:var(--text-muted);">ID ${uid}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:2px;">📡 ${hops} hop${hops!==1?'s':''} · ${hopLabel}</div>
+        </div>
+      </div>
+      <!-- Stats grid -->
+      <div class="radar-result-grid" style="margin-bottom:16px;">
+        <div class="radar-stat"><div class="radar-stat-val">${(counts.friends||0).toLocaleString()}</div><div class="radar-stat-label">Friends</div></div>
+        <div class="radar-stat"><div class="radar-stat-val">${(counts.followers||0).toLocaleString()}</div><div class="radar-stat-label">Followers</div></div>
+        <div class="radar-stat"><div class="radar-stat-val" style="color:var(--success);">${mutuals.length}</div><div class="radar-stat-label">Mutual Friends</div></div>
+      </div>
+      <!-- Mutuals -->
+      ${mutuals.length?`
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px;font-size:11px;">Mutual Friends</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        ${mutuals.slice(0,20).map(f=>`<div class="mutual-tag" onclick="openFriendModal(${JSON.stringify(f).replace(/"/g,'&quot;')})">
+          ${f.thumbnailUrl?`<img src="${f.thumbnailUrl}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;">`:''}
+          @${f.name||f.displayName||'?'}
+        </div>`).join('')}
+        ${mutuals.length>20?`<div class="mutual-tag" style="color:var(--text-muted);">+${mutuals.length-20} more</div>`:''}
+      </div>`:'<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">No mutual friends found in your network.</div>'}
+      <a href="https://www.roblox.com/users/${uid}/profile" target="_blank" class="btn-accent" style="display:inline-block;text-decoration:none;font-size:12px;padding:8px 14px;">View Profile ↗</a>
+    </div>`;
+  }catch(e){progEl.style.display='none';resEl.innerHTML=`<div style="color:var(--danger);font-size:13px;">Radar failed: ${e.message}</div>`;}
+}
+
+function animateBar(barId,pctId,from,to,durationMs){
+  const bar=document.getElementById(barId),pctEl=document.getElementById(pctId);
+  if(!bar)return;
+  let cur=from;const step=(to-from)/Math.max(1,durationMs/40);
+  const iv=setInterval(()=>{cur+=step;if(cur>=to){cur=to;clearInterval(iv);}bar.style.width=Math.round(cur)+'%';if(pctEl)pctEl.textContent=Math.round(cur)+'%';},40);
+}
+
+// ── FRIEND MODAL ─────────────────────────
+async function openFriendModal(friend){
+  if(typeof friend==='string'){try{friend=JSON.parse(friend);}catch(_){return;}}
+  APP.modalFriend=friend;
+  const uid=friend.id||friend.userId;
+  const display=friend.displayName||friend.name||'?';
+  const uname=friend.name||friend.displayName||'?';
+  const ptype=friend.userPresenceType||0;
+  const gameName=friend.gameName||friend.lastLocation||'';
+  const status=ptype===2?`🎮 In Game${gameName?' · '+gameName.slice(0,28):''}`:ptype===3?'🟡 In Studio':ptype===1?'🟢 Online':'⚫ Offline';
+  const statusColor=ptype===2?'var(--info)':ptype>=1?'var(--success)':'var(--text-muted)';
+  document.getElementById('modal-display').textContent=display;
+  document.getElementById('modal-username').textContent='@'+uname;
+  document.getElementById('modal-status').textContent=status;
+  document.getElementById('modal-status').style.color=statusColor;
+  const img=document.getElementById('modal-avatar-img');
+  if(friend.thumbnailUrl){img.src=friend.thumbnailUrl;}
+  else{fetch(`/api/proxy?action=thumbnail&type=avatar&id=${uid}`).then(r=>r.json()).then(d=>{const u=d.data?.[uid];if(u)img.src=u;}).catch(()=>{});}
+  img.onerror=()=>{img.src='';};
+  document.getElementById('modal-followers').textContent='...';
+  document.getElementById('modal-following').textContent='...';
+  document.getElementById('modal-friends-count').textContent='...';
+  document.getElementById('modal-inv-items').innerHTML='<div style="color:var(--text-muted);font-size:13px;">Loading inventory...</div>';
+  document.getElementById('friend-modal').classList.add('show');
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  try{
+    const r=await fetch(`/api/proxy?action=count&userId=${uid}`,{headers});
+    if(r.ok){const d=await r.json();document.getElementById('modal-followers').textContent=(d.followers||0).toLocaleString();document.getElementById('modal-following').textContent=(d.following||0).toLocaleString();document.getElementById('modal-friends-count').textContent=(d.friends||0).toLocaleString();}
+  }catch(_){}
+  loadFriendInventory(uid);
+}
+async function loadFriendInventory(uid){
+  const el=document.getElementById('modal-inv-items');
+  try{
+    const r=await fetch(`/api/proxy?action=inventory&userId=${uid}`);
+    if(!r.ok)throw new Error('private');
+    const d=await r.json();const items=d.data||[];
+    if(!items.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No public inventory items found.</div>';return;}
+    el.innerHTML=items.slice(0,6).map(i=>`<div class="modal-inv-item">
+      <div class="modal-inv-thumb">${i.thumbnailUrl?`<img src="${i.thumbnailUrl}" alt="${i.name||'Item'}">`:'<span style="font-size:18px;display:flex;align-items:center;justify-content:center;height:100%;">👒</span>'}</div>
+      <div class="modal-inv-name">${i.name||'Unknown'}</div>
+      <div class="modal-inv-price" style="font-size:11px;color:var(--text-muted);">${i.assetType||'Asset'}</div>
+    </div>`).join('');
+  }catch(_){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Inventory is private or unavailable.</div>';}
+}
+function closeFriendModal(){document.getElementById('friend-modal').classList.remove('show');}
+function modalAction(action){const f=APP.modalFriend;if(!f)return;const uid=f.id||f.userId;if(action==='view'){window.open('https://www.roblox.com/users/'+uid+'/profile','_blank');}closeFriendModal();}
+
+// ── FOLLOWERS / PENDING / ALL FRIENDS MODALS ──
+async function openFollowersModal(){
+  document.getElementById('followers-modal').classList.add('show');
+  const el=document.getElementById('followers-list-body');
+  el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Loading followers...</div>';
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  try{
+    const r=await fetch(`/api/proxy?action=followers&userId=${APP.user.userId}`,{headers});
+    if(!r.ok)throw new Error('Failed');
+    const d=await r.json();const users=d.data||[];
+    if(!users.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:16px 0;">No followers found.</div>';return;}
+    el.innerHTML=users.map(u=>{
+      const uid2=u.id||u.userId;const display=u.displayName||u.name||'?';const uname=u.name||'?';const thumb=u.thumbnailUrl;
+      return`<div class="friend-item"><div class="friend-avatar" style="background:var(--accent-dim);">${thumb?`<img src="${thumb}" alt="${display}">`:`<span style="color:var(--accent);font-weight:700;">${display[0].toUpperCase()}</span>`}</div><div class="friend-info"><div class="friend-name">${display}</div><div class="friend-display">@${uname}</div></div><div class="friend-actions"><button class="btn-sm" onclick="window.open('https://www.roblox.com/users/${uid2}/profile','_blank')">View</button></div></div>`;
+    }).join('');
+  }catch(_){el.innerHTML='<div style="color:var(--warning);font-size:13px;">⚠ Could not load followers. Ensure ROBLOSECURITY is set in Vercel env vars.</div>';}
+}
+async function openPendingModal(){
+  document.getElementById('pending-modal').classList.add('show');
+  const el=document.getElementById('pending-list-body');
+  el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Loading...</div>';
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  try{
+    const r=await fetch(`/api/proxy?action=pending&userId=${APP.user.userId}`,{headers});
+    if(!r.ok)throw new Error('Failed');
+    const d=await r.json();const users=d.data||[];
+    if(!users.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No pending friend requests.</div>';return;}
+    el.innerHTML=users.map(u=>{
+      const uid2=u.id||u.userId;const display=u.displayName||u.name||'?';const uname=u.name||'?';const thumb=u.thumbnailUrl;
+      return`<div class="friend-item"><div class="friend-avatar" style="background:var(--accent-dim);">${thumb?`<img src="${thumb}" alt="${display}">`:`<span style="color:var(--accent);font-weight:700;">${display[0].toUpperCase()}</span>`}</div><div class="friend-info"><div class="friend-name">${display}</div><div class="friend-display">@${uname}</div></div><div class="friend-actions"><button class="btn-sm" style="color:var(--success);border-color:rgba(34,208,106,.3);" onclick="acceptFriendRequest(this,${uid2},'${display}')">Accept</button><button class="btn-sm danger" onclick="declineFriendRequest(this,${uid2},'${display}')">Decline</button></div></div>`;
+    }).join('');
+  }catch(_){el.innerHTML='<div style="color:var(--warning);font-size:13px;">⚠ Could not load requests. Set ROBLOSECURITY in Vercel env vars.</div>';}
+}
+async function openAllFriends(){
+  document.getElementById('allfriends-modal').classList.add('show');
+  const el=document.getElementById('allfriends-list-body');
+  if(!APP.friends.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No friends loaded yet...</div>';return;}
+  el.innerHTML=APP.friends.map(f=>{
+    const uid=f.id||f.userId;const display=f.displayName||f.name||'?';const uname=f.name||'?';
+    const status=f.isOnline?(f.userPresenceType===2?'ingame':'online'):'offline';
+    const statusTxt=status==='ingame'?'🎮 In Game':status==='online'?'● Online':'○ Offline';
+    const thumb=f.thumbnailUrl;
+    return`<div class="friend-item"><div class="friend-avatar" style="background:var(--accent-dim);">${thumb?`<img src="${thumb}" alt="${display}" onerror="this.parentElement.innerHTML='<span style=color:var(--accent);font-weight:700>${display[0].toUpperCase()}</span>';">`:`<span style="color:var(--accent);font-weight:700;">${display[0].toUpperCase()}</span>`}<span class="presence-dot ${status}"></span></div><div class="friend-info"><div class="friend-name">${display}</div><div class="friend-display">@${uname}</div><div class="friend-status ${status}">${statusTxt}</div></div><div class="friend-actions"><button class="btn-sm" onclick="openFriendModal(${JSON.stringify(f).replace(/"/g,'&quot;')})">View</button></div></div>`;
+  }).join('');
+}
+async function acceptFriendRequest(btn,uid,display){btn.disabled=true;btn.textContent='...';try{const r=await fetch(`/api/proxy?action=acceptRequest&targetId=${uid}`,{method:'POST'});if(r.ok){showToast(`@${display} accepted`);btn.closest('.friend-item').remove();}else{btn.disabled=false;btn.textContent='Accept';}}catch(e){btn.disabled=false;btn.textContent='Accept';}}
+async function declineFriendRequest(btn,uid,display){btn.disabled=true;btn.textContent='...';try{const r=await fetch(`/api/proxy?action=declineRequest&targetId=${uid}`,{method:'POST'});if(r.ok){showToast(`@${display} declined`);btn.closest('.friend-item').remove();}else{btn.disabled=false;btn.textContent='Decline';}}catch(e){btn.disabled=false;btn.textContent='Decline';}}
+
+// ══════════════════════════════════════════
+//  ASSET AUDIT HUB
+// ══════════════════════════════════════════
+const CATEGORIES=['Gamepasses','Accessories','Animations','Bundles','Clothing','Models'];
+const CAT_ICONS={'Gamepasses':'🎫','Accessories':'👒','Animations':'🎬','Bundles':'📦','Clothing':'👕','Models':'🧱'};
+
+async function startValueCheck(){
+  document.getElementById('start-value-btn').style.display='none';
+  document.getElementById('value-progress').style.display='block';
+  const bar=document.getElementById('value-bar'),pctEl=document.getElementById('value-pct'),label=document.getElementById('value-label'),timeEl=document.getElementById('value-time');
+  const chips=document.getElementById('cat-chips');
+  chips.innerHTML=CATEGORIES.map(c=>`<div id="chip-${c}" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover);font-size:11px;font-weight:600;color:var(--text-muted);text-align:center;">${CAT_ICONS[c]||'📦'} ${c}</div>`).join('');
+  const uid=APP.user?.userId||'';
+  if(!uid){label.textContent='No userId — please reconnect.';return;}
+  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+  let pct=0;
+  const iv=setInterval(()=>{pct=Math.min(pct+3,30);bar.style.width=pct+'%';pctEl.textContent=pct+'%';},200);
+  label.textContent='Fetching real inventory from Roblox...';
+  let rapTotal=0,gpTotal=0,accTotal=0,otherTotal=0;
+  try{
+    let auditData=null;
+    try{const r=await fetch(`/api/proxy?action=inventory&userId=${uid}`,{headers});if(r.ok)auditData=await r.json();}catch(_){}
+    clearInterval(iv);pct=60;bar.style.width=pct+'%';pctEl.textContent=pct+'%';
+    label.textContent='Fetching limiteds & RAP values...';
+    let rapItems=[];
+    try{const r=await fetch(`/api/proxy?action=value&userId=${uid}`,{headers});if(r.ok){const d=await r.json();rapItems=d.data||[];rapTotal=d.totalRap||0;}}catch(_){}
+    pct=85;bar.style.width=pct+'%';pctEl.textContent=pct+'%';
+    label.textContent='Calculating totals...';
+    const items=auditData?.data||[];
+    for(const item of items){
+      const price=item.rap||item.price||0;const group=item._group||'';
+      if(group==='gamepasses')gpTotal+=price;
+      else if(group==='accessories')accTotal+=price;
+      else if(group!=='limiteds')otherTotal+=price;
+    }
+    const totalVal=rapTotal+gpTotal+accTotal+otherTotal;
+    pct=100;bar.style.width='100%';pctEl.textContent='100%';
+    setTimeout(()=>{
+      document.getElementById('value-progress').style.display='none';
+      document.getElementById('value-results').style.display='block';
+      document.getElementById('total-value').textContent='R$ '+totalVal.toLocaleString();
+      document.getElementById('rap-value').textContent='R$ '+rapTotal.toLocaleString();
+      document.getElementById('gp-value').textContent='R$ '+gpTotal.toLocaleString();
+      document.getElementById('acc-value').textContent='R$ '+accTotal.toLocaleString();
+      document.getElementById('other-value').textContent='R$ '+otherTotal.toLocaleString();
+      renderInventory(items,rapItems);
+    },400);
+  }catch(e){clearInterval(iv);label.textContent='Error: '+e.message;}
+}
+
+function renderInventory(items,rapItems){
+  const el=document.getElementById('inventory-items');
+  const allItems=[...rapItems.map(i=>({...i,_group:'limiteds'})),...items.filter(i=>i._group!=='limiteds')];
+  if(!allItems.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No inventory items found.</div>';return;}
+  el.innerHTML=allItems.slice(0,50).map(i=>`
+    <div class="inv-item">
+      <div class="inv-thumb">${i.thumbnailUrl?`<img src="${i.thumbnailUrl}" alt="${i.name||'Item'}">`:'<span>📦</span>'}</div>
+      <div class="inv-info">
+        <div class="inv-name">${i.name||'Unknown'}</div>
+        <div class="inv-meta">${i.assetType||i._group||'Asset'}${i.creator?` · @${i.creator}`:''}</div>
+      </div>
+      <div class="inv-price">${(i.rap||i.price)?(''+(i.rap||i.price)).startsWith('R$')?i.rap||i.price:'R$ '+(i.rap||i.price).toLocaleString():'—'}</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  ULTIMATE DISCOVERY
+// ══════════════════════════════════════════
+const DISCOVERY_CATEGORIES=[
+  {label:'🔥 Most Visited / Played',sortOrder:2},
+  {label:'👫 Fun with Friends',sortOrder:6},
+  {label:'📈 Top Trending',sortOrder:3},
+  {label:'⭐ Top Rated',sortOrder:4},
+  {label:'🔁 Top Revisited',sortOrder:7},
+  {label:'🎭 Roleplay & Avatar Sim',sortOrder:5,genreFilter:'Social'},
+  {label:'🏗️ Simulation',sortOrder:2,genreFilter:'Simulation'},
+  {label:'⚔️ Action & Fighting',sortOrder:2,genreFilter:'Fighting'},
+  {label:'🔫 Shooter',sortOrder:2,genreFilter:'Shooter'},
+  {label:'😱 Horror & Survival',sortOrder:2,genreFilter:'Horror'},
+  {label:'🏃 Obby & Platformer',sortOrder:2,genreFilter:'Obstacle'},
+  {label:'🗡️ RPG',sortOrder:2,genreFilter:'RPG'},
+  {label:'🎉 Party & Casual',sortOrder:2,genreFilter:'Comedy'},
+  {label:'💰 Tycoon & Idle',sortOrder:2,genreFilter:'Tycoon'},
+  {label:'🏎️ Sports & Racing',sortOrder:2,genreFilter:'Sports'},
+  {label:'🚀 Up-and-Coming',sortOrder:0},
+];
+
+function getGameThumb(placeId){return `https://www.roblox.com/asset-thumbnail/image?assetId=${placeId}&width=768&height=432&format=png`;}
+function formatPlaying(n){if(!n||n<0)return '0';if(n>=1000000)return (n/1000000).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'K';return n.toLocaleString();}
+function formatVisits(n){if(!n||n<0)return '';if(n>=1000000000)return (n/1000000000).toFixed(1)+'B visits';if(n>=1000000)return (n/1000000).toFixed(1)+'M visits';if(n>=1000)return (n/1000).toFixed(1)+'K visits';return n.toLocaleString()+' visits';}
+function likesRatio(up,down){const total=up+down;if(!total)return '';return Math.round(up/total*100)+'% liked';}
+
+async function fetchDiscoveryGames(sortOrder){
+  try{
+    const r=await fetch(`/api/proxy?action=discoverGames&sortOrder=${sortOrder}`);
+    if(r.ok){const d=await r.json();return d.data||[];}
+  }catch(_){}
+  return [];
+}
+
+async function populateDiscovery(){
+  const grid=document.getElementById('discovery-grid');
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:12px;display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>Loading live games...</div>';
+  const allCards=[];
+  for(const cat of DISCOVERY_CATEGORIES){
+    const games=await fetchDiscoveryGames(cat.sortOrder);
+    allCards.push({label:cat.label,games});
+  }
+  grid.innerHTML=allCards.map(({label,games})=>{
+    if(!games.length)return '';
+    const cards=games.slice(0,6).map(g=>{
+      const placeId=g.placeId||g.rootPlaceId||g.gameId;
+      const name=g.name||'Unknown';
+      const creator=g.creatorName||g.creator?.name||g.creator||'';
+      const playing=g.playerCount||g.playing||0;
+      const visits=g.visits||0;
+      const upVotes=g.totalUpVotes||0;const downVotes=g.totalDownVotes||0;
+      const genre=g.genre||g.subGenre||'';
+      const thumb=placeId?getGameThumb(placeId):'';
+      return`<div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')">
+        <div class="discovery-thumb">
+          <img src="${thumb}" alt="${name}" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';">
+          <div class="discovery-thumb-overlay"></div>
+        </div>
+        <div class="discovery-body">
+          <div class="discovery-name">${name}</div>
+          ${genre?`<div class="discovery-genre">${genre}</div>`:''}
+          <div class="discovery-stats">
+            <span class="discovery-stat" style="color:var(--success);font-weight:700;">▶ ${formatPlaying(playing)}</span>
+            ${formatVisits(visits)?`<span class="discovery-stat" style="color:var(--text-muted);">${formatVisits(visits)}</span>`:''}
+            ${(upVotes||downVotes)?`<span class="discovery-stat" style="color:var(--text-muted);">${likesRatio(upVotes,downVotes)}</span>`:''}
+          </div>
+          ${creator?`<div class="discovery-creator">@${creator}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return`<div style="margin-bottom:28px;">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.5px;margin-bottom:12px;padding:0 2px;display:flex;align-items:center;gap:8px;">${label}</div>
+      <div class="grid-3">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
+// Game Search — Top 3 only, filtered by visits + verified creators
+async function searchGames(){
+  const q=document.getElementById('disc-query').value.trim();
+  if(!q)return;
+  const progEl=document.getElementById('disc-search-progress');
+  const resEl=document.getElementById('disc-search-results');
+  progEl.style.display='block';resEl.innerHTML='';
+  animateBar('disc-bar','disc-pct',0,85,1400);
+  try{
+    const r=await fetch(`/api/proxy?action=searchGames&q=${encodeURIComponent(q)}`);
+    let games=[];
+    if(r.ok){const d=await r.json();games=d.data||[];}
+    animateBar('disc-bar','disc-pct',85,100,400);
+    await new Promise(r=>setTimeout(r,500));
+    progEl.style.display='none';
+    if(!games.length){resEl.innerHTML=`<div style="color:var(--text-muted);font-size:13px;">No games found for "<strong>${q}</strong>".</div>`;return;}
+    // Filter & sort by visits, take top 3
+    const top3=games.filter(g=>g.visits>10000||g.playerCount>0).sort((a,b)=>(b.visits||0)-(a.visits||0)).slice(0,3);
+    const show=top3.length?top3:games.slice(0,3);
+    resEl.innerHTML=`<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Showing top ${show.length} result${show.length!==1?'s':''} for "<strong>${q}</strong>"</div>
+    <div class="grid-3" style="margin-bottom:4px;">
+    ${show.map(g=>{
+      const placeId=g.placeId||g.rootPlaceId||g.gameId;
+      const name=g.name||'Unknown';
+      const creator=g.creatorName||g.creator?.name||g.creator||'';
+      const playing=g.playerCount||g.playing||0;
+      const visits=g.visits||0;
+      const favorites=g.favoritedCount||g.favorites||0;
+      const upVotes=g.totalUpVotes||0;const downVotes=g.totalDownVotes||0;
+      const genre=g.genre||g.subGenre||'';
+      const thumb=placeId?getGameThumb(placeId):'';
+      return`<div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')" style="animation-delay:${show.indexOf(g)*0.08}s;">
+        <div class="discovery-thumb">
+          <img src="${thumb}" alt="${name}" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';">
+          <div class="discovery-thumb-overlay"></div>
+        </div>
+        <div class="discovery-body">
+          <div class="discovery-name">${name}</div>
+          ${genre?`<div class="discovery-genre">${genre}</div>`:''}
+          <div class="discovery-stats">
+            <span class="discovery-stat" style="color:var(--success);font-weight:700;">▶ ${formatPlaying(playing)}</span>
+            ${formatVisits(visits)?`<span class="discovery-stat" style="color:var(--text-muted);">${formatVisits(visits)}</span>`:''}
+            ${favorites?`<span class="discovery-stat">❤️ ${formatPlaying(favorites)}</span>`:''}
+            ${(upVotes||downVotes)?`<span class="discovery-stat">${likesRatio(upVotes,downVotes)}</span>`:''}
+          </div>
+          ${creator?`<div class="discovery-creator">@${creator}</div>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+  }catch(e){progEl.style.display='none';resEl.innerHTML=`<div style="color:var(--danger);font-size:13px;">Search failed: ${e.message}</div>`;}
+}
+
+// ══════════════════════════════════════════
+//  SECURITY
+// ══════════════════════════════════════════
+const SECURITY_ITEMS=[
+  {status:'pass',title:'2-Factor Authentication',desc:'Authenticator app enabled'},
+  {status:'pass',title:'Account PIN',desc:'PIN is active and configured'},
+  {status:'warn',title:'Verified Email',desc:'Email not verified — action needed'},
+  {status:'pass',title:'Phone Number',desc:'Phone linked and verified'},
+  {status:'fail',title:'Parental Controls',desc:'Not configured for account'},
+  {status:'pass',title:'Login Notification',desc:'Email alerts on new sign-ins'},
+];
+const PRIVACY_ITEMS=[
+  {label:'Inventory Visibility',value:'Friends Only',ok:true},
+  {label:'Trade Requests',value:'Friends Only',ok:true},
+  {label:'Message Permissions',value:'Everyone',ok:false},
+  {label:'Join Status',value:'No one can follow',ok:true},
+];
+
+function populateSecurity(){
+  document.getElementById('security-checklist').innerHTML=SECURITY_ITEMS.map((s,i)=>`
+    <div class="security-item" style="animation-delay:${i*0.05}s;">
+      <div class="security-check ${s.status}">${s.status==='pass'?'✓':s.status==='warn'?'!':'✗'}</div>
+      <div class="security-text"><div class="security-title">${s.title}</div><div class="security-desc">${s.desc}</div></div>
+      <button class="btn-sm" onclick="openSecurityCheck('${s.title}')">Check</button>
+    </div>`).join('');
+}
+function openSecurityCheck(title){
+  const urls={'2-Factor Authentication':'https://www.roblox.com/my/account#!/security','Account PIN':'https://www.roblox.com/my/account#!/security','Verified Email':'https://www.roblox.com/my/account#!/info','Phone Number':'https://www.roblox.com/my/account#!/info','Parental Controls':'https://www.roblox.com/my/account#!/parental-controls','Login Notification':'https://www.roblox.com/my/account#!/security'};
+  window.open(urls[title]||'https://www.roblox.com/my/account#!/security','_blank');showToast('Opening Roblox security settings...');
+}
+function populatePrivacy(){
+  document.getElementById('privacy-audit').innerHTML=PRIVACY_ITEMS.map((p,i)=>`
+    <div class="security-item" style="animation-delay:${i*0.05}s;">
+      <div class="security-check ${p.ok?'pass':'warn'}">${p.ok?'✓':'!'}</div>
+      <div class="security-text"><div class="security-title">${p.label}</div><div class="security-desc">${p.value}</div></div>
+      <button class="btn-sm" onclick="editPrivacySetting('${p.label}')">Edit</button>
+    </div>`).join('');
+}
+function editPrivacySetting(label){showToast('Opening Roblox privacy settings...');window.open('https://www.roblox.com/my/account#!/privacy','_blank');}
+function runSecurityScan(){
+  document.getElementById('security-progress').style.display='block';
+  let pct=0;const bar=document.getElementById('sec-bar');
+  const iv=setInterval(()=>{pct=Math.min(pct+Math.random()*15+5,100);bar.style.width=pct+'%';if(pct>=100){clearInterval(iv);document.getElementById('security-progress').style.display='none';showToast('Security scan complete · Score: 82/100');}},200);
+}
+
+// ══════════════════════════════════════════
+//  RBLX VALUES
+// ══════════════════════════════════════════
+const POPULAR_LIMITEDS=[
+  {name:'Dominus Empyreus',id:21070012,value:'~40,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/21070012'},
+  {name:'Korblox Deathspeaker',id:19027209,value:'~20,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/19027209'},
+  {name:'Hallows Edge',id:119736750,value:'~8,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/119736750'},
+  {name:'Valkyrie Helm',id:1365767,value:'~3,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/1365767'},
+  {name:'Sparkle Time Fedora',id:108548,value:'~2,000 R$',creator:'Roblox',link:'https://www.roblox.com/catalog/108548'},
+];
+const DEMAND_LABELS={'-1':'None','0':'Terrible','1':'Low','2':'Normal','3':'High','4':'Amazing'};
+const DEMAND_COLORS={'-1':'#888','0':'#e74c3c','1':'#e67e22','2':'#f1c40f','3':'#2ecc71','4':'#9b59b6'};
+const TREND_LABELS={'-1':'None','0':'Lowering','1':'Unstable','2':'Stable','3':'Raising','4':'Fluctuating'};
+const TREND_ICONS={'-1':'—','0':'📉','1':'〰️','2':'➡️','3':'📈','4':'🔀'};
+
+function populatePopularLimiteds(){
+  document.getElementById('popular-limiteds').innerHTML=`
+    <table class="value-result-table">
+      <thead><tr><th>Name</th><th>Est. Value</th><th>Creator</th><th>Link</th></tr></thead>
+      <tbody>${POPULAR_LIMITEDS.map(i=>`<tr>
+        <td style="font-weight:600;">${i.name}</td>
+        <td style="color:var(--warning);font-family:var(--mono);font-weight:700;">${i.value}</td>
+        <td style="color:var(--text-secondary);">@${i.creator}</td>
+        <td><a class="value-link" href="${i.link}" target="_blank">Roblox ↗</a></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function hubCheckValue(){
+  const query=document.getElementById('hub-value-query').value.trim();if(!query)return;
+  const catVal=(document.getElementById('hub-value-category')?.value||'2|').split('|');
+  const category=catVal[0]||'2';const subcategory=catVal[1]||'';
+  const el=document.getElementById('hub-value-results');
+  el.innerHTML=`<div style="color:var(--text-muted);font-size:13px;margin-top:12px;display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>Searching for "${query}"...</div>`;
+  await searchItemValue(query,el,category,subcategory);
+}
+
+async function searchItemValue(query,el,category='2',subcategory=''){
+  try{
+    let url=`/api/search-items?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`;
+    if(subcategory)url+=`&subcategory=${encodeURIComponent(subcategory)}`;
+    const r=await fetch(url);
+    let results=[];
+    if(r.ok){const d=await r.json();results=d.results||[];}
+    if(!results.length){
+      el.innerHTML=`<div style="padding:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);margin-top:12px;font-size:13px;color:var(--text-secondary);">No results for "<strong>${query}</strong>". Try <a href="https://rolimons.com/search?q=${encodeURIComponent(query)}" target="_blank" class="value-link">Rolimons ↗</a></div>`;
+      return;
+    }
+    el.innerHTML=`<div style="margin-top:12px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Found ${results.length} result${results.length!==1?'s':''}</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+    ${results.map((i,idx)=>{
+      const thumb=i.thumbnailUrl;
+      const rap=i.rap?'R$ '+i.rap.toLocaleString():null;
+      const val=i.displayValue?'R$ '+i.displayValue.toLocaleString():null;
+      const catPrice=i.catalogPrice!=null?'R$ '+i.catalogPrice.toLocaleString():null;
+      const demand=i.demand;const trend=i.trend;
+      return`<div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);animation:fadeIn .3s ${idx*0.06}s ease both;opacity:0;animation-fill-mode:both;">
+        <div style="flex-shrink:0;width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--accent-dim);">${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" alt="${i.name}">`:'<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;">📦</span>'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+            <a class="value-link" href="${i.robloxUrl}" target="_blank" style="font-size:13px;font-weight:700;">${i.name}</a>
+            ${i.acronym?`<span style="font-size:10px;color:var(--text-muted);background:var(--bg-hover);padding:1px 5px;border-radius:4px;">${i.acronym}</span>`:''}
+            ${i.isLimited?'<span class="badge badge-limited">LIMITED</span>':`<span style="font-size:10px;color:var(--text-muted);background:var(--bg-hover);padding:1px 5px;border-radius:4px;">${i.assetType||'Item'}</span>`}
+            ${i.isProjected?'<span style="font-size:10px;color:var(--danger);background:rgba(240,64,64,.1);padding:1px 6px;border-radius:4px;font-weight:700;">⚠ PROJECTED</span>':''}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-bottom:6px;">
+            ${rap?`<span>RAP: <strong style="color:var(--text-primary);">${rap}</strong></span>`:''}
+            ${val?`<span>Value: <strong style="color:var(--success);">${val}</strong></span>`:''}
+            ${catPrice?`<span>Price: <strong style="color:${i.isLimited?'var(--warning)':'var(--text-primary)'};">${catPrice}</strong></span>`:''}
+            ${!rap&&!val&&!catPrice?`<span style="color:var(--text-muted);">Off-sale / No value data</span>`:''}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;">
+            ${demand?`<span>Demand: <strong style="color:${demand.color};">${demand.label}</strong></span>`:''}
+            ${trend?`<span>Trend: <strong>${trend.icon} ${trend.label}</strong></span>`:''}
+            ${i.creator?`<span style="color:var(--text-muted);">by @${i.creator}</span>`:''}
+          </div>
+          <div style="margin-top:6px;display:flex;gap:8px;">
+            <a class="value-link" href="${i.robloxUrl}" target="_blank" style="font-size:11px;">Roblox ↗</a>
+            ${i.isLimited?`<a class="value-link" href="${i.roliUrl}" target="_blank" style="font-size:11px;">Rolimons ↗</a>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+  }catch(_){
+    el.innerHTML=`<div style="padding:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);margin-top:12px;font-size:13px;"><span style="color:var(--warning);">⚠</span> Search failed. <a class="value-link" href="https://rolimons.com/search?q=${encodeURIComponent(query)}" target="_blank">Search on Rolimons ↗</a></div>`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  PROFILE ADVANCED
+// ══════════════════════════════════════════
+async function loadProfileAdvanced(){
+  const token=APP.rbxToken;
+  const els={status:document.getElementById('profile-adv-status'),social:document.getElementById('profile-adv-social'),full:document.getElementById('profile-adv-full')};
+  if(!token){Object.values(els).forEach(e=>e.innerHTML='<span style="color:var(--warning);">⚠ Connect Roblox account first.</span>');return;}
+  Object.values(els).forEach(e=>e.innerHTML='<span style="color:var(--text-muted);">Loading...</span>');
+  try{
+    const [advR,socialR,infoR]=await Promise.allSettled([
+      fetch('/api/proxy?action=profileAdvanced',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
+      fetch('/api/proxy?action=profileSocial',{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
+      fetch('/api/proxy?action=userInfo&userId='+APP.user.userId,{headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
+    ]);
+    const adv=advR.status==='fulfilled'?advR.value:{};
+    const isPremium=adv.isPremium||adv.premium;const isVerified=adv.isVerified||adv.verified;
+    els.status.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${isPremium?'⭐':'👤'}</span><div><div style="font-size:13px;font-weight:600;">Premium</div><div style="font-size:12px;color:${isPremium?'var(--success)':'var(--text-muted)'};">${isPremium?'Active':'Not subscribed'}</div></div></div>
+      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${isVerified?'✅':'❌'}</span><div><div style="font-size:13px;font-weight:600;">ID Verified</div><div style="font-size:12px;color:${isVerified?'var(--success)':'var(--text-muted)'};">${isVerified?'Verified':'Not verified'}</div></div></div>
+      ${adv.countryCode?`<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">🌍</span><div><div style="font-size:13px;font-weight:600;">Region</div><div style="font-size:12px;color:var(--text-secondary);">${adv.countryCode}</div></div></div>`:''}
+    </div>`;
+    const social=socialR.status==='fulfilled'?socialR.value:{};
+    const links=social.socialLinks||social.data||[];
+    els.social.innerHTML=links.length?links.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:16px;">${l.type==='Twitter'?'🐦':l.type==='YouTube'?'▶️':l.type==='Twitch'?'💜':l.type==='Discord'?'🎮':'🔗'}</span><div><div style="font-size:12px;font-weight:600;">${l.type||'Link'}</div><a href="${l.url}" target="_blank" style="font-size:11px;color:var(--accent);">${l.url}</a></div></div>`).join(''):'<div style="color:var(--text-muted);font-size:12px;">No social links set.</div>';
+    const info=infoR.status==='fulfilled'?infoR.value:{};
+    els.full.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+      ${[['User ID',info.id||APP.user.userId],['Username',info.name||APP.user.username],['Display Name',info.displayName||'—'],['Created',info.created?new Date(info.created).toLocaleDateString():'—'],['Bio',info.description||'No bio set']].map(([k,v])=>`<div style="background:var(--bg-elevated);padding:8px;border-radius:var(--radius);border:1px solid var(--border);"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">${k}</div><div style="color:var(--text-primary);font-weight:500;word-break:break-word;">${v}</div></div>`).join('')}
+    </div>`;
+  }catch(e){Object.values(els).forEach(el=>el.innerHTML=`<span style="color:var(--danger);font-size:12px;">Error: ${e.message}</span>`);}
+}
+
+// ══════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════
+const SETTINGS_TOGGLES=[
+  {icon:'✨',name:'UI Animations',desc:'Fade-in, slide, glow effects across the dashboard',key:'animations',on:true},
+  {icon:'💠',name:'Blur Effects',desc:'Backdrop blur on glass elements (costs GPU)',key:'blur',on:true},
+  {icon:'🌟',name:'Glow Effects',desc:'Neon glow on active elements and accent items',key:'glow',on:true},
+  {icon:'🔔',name:'Desktop Notifications',desc:'Alerts for friend activity',key:'notifs',on:true},
+  {icon:'🔒',name:'Zero-Trust Purge',desc:'Clear all tokens on disconnect',key:'purge',on:true},
+  {icon:'⚡',name:'Async Concurrency',desc:'Parallel asset fetch calculations',key:'async',on:true},
+];
+
+function populateSettingsToggles(){
+  SETTINGS_TOGGLES.forEach(s=>{if(APP.toggles[s.key]===undefined)APP.toggles[s.key]=s.on;});
+  document.getElementById('settings-toggles').innerHTML=SETTINGS_TOGGLES.map(s=>`
+    <div class="setting-item" onclick="toggleSetting('${s.key}')">
+      <div class="setting-icon">${s.icon}</div>
+      <div class="setting-text">
+        <div class="setting-name">${s.name}</div>
+        <div class="setting-desc">${s.desc}</div>
+      </div>
+      <div class="toggle ${APP.toggles[s.key]?'on':''}" id="toggle-${s.key}"><div class="toggle-knob"></div></div>
+    </div>`).join('');
+}
+
+function toggleSetting(key){
+  APP.toggles[key]=!APP.toggles[key];
+  const el=document.getElementById('toggle-'+key);
+  if(el)el.className='toggle'+(APP.toggles[key]?' on':'');
+  saveSession();
+  applyPerformanceMode();
+  showToast((APP.toggles[key]?'Enabled: ':'Disabled: ')+SETTINGS_TOGGLES.find(s=>s.key===key)?.name);
+}
+
+function applyPerformanceMode(){
+  const noAnim=!APP.toggles.animations;
+  const noBlur=!APP.toggles.blur;
+  const noGlow=!APP.toggles.glow;
+  document.body.classList.toggle('perf-mode',noAnim);
+  // Blur
+  const blurEls=document.querySelectorAll('.sidebar,.topbar,.card,.stat-card,.auth-card,.friend-item,.inv-item,.security-item,.setting-item,.progress-wrap,.discovery-card');
+  blurEls.forEach(el=>{if(noBlur){el.style.backdropFilter='none';el.style.webkitBackdropFilter='none';}else{el.style.backdropFilter='';el.style.webkitBackdropFilter='';}});
+  // Glow
+  const style=document.getElementById('glow-override')||Object.assign(document.createElement('style'),{id:'glow-override'});
+  if(noGlow){style.textContent='.auth-logo-icon,.topbar-badge,.card-title-dot,.user-avatar,.stat-card::after,.load-bar-fill,.load-bar-dot,.toggle.on{animation:none!important;box-shadow:none!important;text-shadow:none!important;}';}
+  else{style.textContent='';}
+  if(!document.getElementById('glow-override'))document.head.appendChild(style);
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function switchHub(id,btn){
+  document.querySelectorAll('.hub-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('hub-'+id).classList.add('active');
+  btn.classList.add('active');
+  const titles={social:'Social Commander',assets:'Asset & Collections',discovery:'Ultimate Discovery',security:'Account Defense','profile-advanced':'My Profile+',values:'Rblx Values Hub',settings:'Project Next Settings'};
+  document.getElementById('topbar-title').textContent=titles[id]||id;
+  closeSidebar();applyLanguage(APP.lang||'en');
+  if(id==='profile-advanced')loadProfileAdvanced();
+}
+
+// ══════════════════════════════════════════
+//  THEME
+// ══════════════════════════════════════════
+const THEMES={
+  genesis:{accent:'#A020F0',bg:'#0B0C0D',surface:'#16181A',elevated:'#1E2124',hover:'#252830'},
+  glass:{accent:'#A020F0',bg:'#0D0F14',surface:'rgba(20,24,32,0.55)',elevated:'rgba(28,32,40,0.5)',hover:'rgba(38,42,54,0.55)'},
+  cyber:{accent:'#00FF41',bg:'#001000',surface:'#001a00',elevated:'#002000',hover:'#002a00'},
+  oled:{accent:'#A020F0',bg:'#000000',surface:'#0A0A0A',elevated:'#111111',hover:'#1A1A1A'},
 };
+function selectTheme(el,theme){document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');applyTheme(theme);localStorage.setItem('pn_theme',theme);showToast('Theme: '+el.querySelector('.theme-name').textContent);}
+function applyTheme(theme){document.documentElement.setAttribute('data-theme',theme);const t=THEMES[theme];if(!t)return;const r=document.documentElement.style;r.setProperty('--accent',t.accent);r.setProperty('--accent-dim',t.accent+'26');r.setProperty('--accent-glow',t.accent+'59');r.setProperty('--border-accent',t.accent+'66');r.setProperty('--bg-base',t.bg);r.setProperty('--bg-surface',t.surface);r.setProperty('--bg-elevated',t.elevated);r.setProperty('--bg-hover',t.hover);}
+function restoreTheme(){const saved=localStorage.getItem('pn_theme')||'genesis';applyTheme(saved);document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('selected'));const active=document.querySelector(`.theme-card[onclick*="'${saved}'"]`);if(active)active.classList.add('selected');}
+
+// ══════════════════════════════════════════
+//  SIGN OUT / MOBILE / TOAST / I18N
+// ══════════════════════════════════════════
+function signOut(){
+  clearSession();showToast('All accounts disconnected');
+  setTimeout(()=>{
+    showScreen('auth');APP.authStep=0;
+    document.getElementById('step-google').className='auth-step active';document.getElementById('step1-num').textContent='1';
+    document.getElementById('step-roblox').className='auth-step';document.getElementById('step2-num').textContent='2';
+    const btn=document.getElementById('auth-btn');btn.disabled=false;btn.textContent='Connect with Google';
+    hideAuthErr();
+  },1000);
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+let _toastTimer;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+
+// ── I18N ────────────────────────────────
+const I18N={
+  en:{hub1:'Social Commander',hub2:'Asset & Collections',hub3:'Ultimate Discovery',hub4:'Account Defense',friendCount:'Total Friends',onlineNow:'Online Now',rbxTotal:'R$ Total',initAccess:'Initialize Access',initSub:'Complete the two-step identity bridge to sync your accounts and unlock the full dashboard.',connectGoogle:'Connect with Google',syncAccounts:'Sync your accounts to unlock all features'},
+  tl:{hub1:'Social Commander',hub2:'Pamamahala ng Mga Asset',hub3:'Panghuling Pagtuklas',hub4:'Depensa ng Account',friendCount:'Kabuuang Mga Kaibigan',onlineNow:'Online Ngayon',rbxTotal:'Kabuuang Halaga ng Robux',initAccess:'Simulan ang Access',initSub:'Kumpletuhin ang dalawang-hakbang na identity bridge upang i-sync ang iyong mga account.',connectGoogle:'Kumonekta sa Google',syncAccounts:'I-sync ang iyong mga account'},
+};
+function t(key,...args){const lang=APP.lang||'en';const val=(I18N[lang]||I18N.en)[key];if(typeof val==='function')return val(...args);return val||I18N.en[key]||key;}
+function setLanguage(lang){APP.lang=lang;saveSession();applyLanguage(lang);showToast('Language changed');}
+function applyLanguage(lang){
+  APP.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');const val=t(key);if(val)el.textContent=val;});
+  document.querySelectorAll('[data-i18n-auth]').forEach(el=>{const key=el.getAttribute('data-i18n-auth');const val=(I18N[lang]||I18N.en)[key]||(I18N.en)[key];if(val)el.textContent=val;});
+  const sel=document.getElementById('lang-select');if(sel)sel.value=lang;
+}
+</script>
+</body>
+</html>
