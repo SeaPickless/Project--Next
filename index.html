@@ -859,8 +859,6 @@ function hideAuthErr(){const el=document.getElementById('auth-err');el.innerHTML
 // ── AUTH ─────────────────────────────────
 async function handleAuthStep(){
   const btn=document.getElementById('auth-btn');hideAuthErr();
-  const dbg=(msg)=>{showAuthErr(msg);console.log('[auth]',msg);};
-  dbg('Step '+APP.authStep+' — google='+(typeof google)+' — clicking...');
   if(APP.authStep===0){
     btn.disabled=true;btn.textContent='Opening Google popup...';
     try{await doGoogleAuth();markStepDone('google');APP.authStep=1;btn.disabled=false;btn.textContent='Authorize Roblox Open Cloud';}
@@ -1044,7 +1042,7 @@ async function lookupUser(){
           <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);margin-bottom:10px;"><span>📅 Joined ${joinDate}</span><span>·</span><span>⏱ ${ageYears} yrs</span></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a href="https://www.roblox.com/users/${uid}/profile" target="_blank" class="value-link" style="font-size:12px;">View on Roblox ↗</a>
-            <button class="btn-sm" onclick="runFriendRadarById(${uid},'${(prof.name||username).replace(/'/g,'\\'')}')">Radar Scan ⟳</button>
+            <button class="btn-sm" onclick="runFriendRadarById(${uid},'${(prof.name||username).replace(/'/g,'&#39;')}')">Radar Scan ⟳</button>
           </div>
         </div>
       </div>`;
@@ -1172,31 +1170,30 @@ async function runProfileCompare(){
     const tA=(thumbA.data||[])[0]?.imageUrl||'';const tB=(thumbB.data||[])[0]?.imageUrl||'';
     const ageA=infoA.created?((Date.now()-new Date(infoA.created))/(1000*60*60*24*365.25)).toFixed(1):'?';
     const ageB=infoB.created?((Date.now()-new Date(infoB.created))/(1000*60*60*24*365.25)).toFixed(1):'?';
-    function col(card,label,valA,valB,higherIsBetter=true){
-      const nA=parseFloat(valA)||0;const nB=parseFloat(valB)||0;
-      const winA=higherIsBetter?nA>nB:nA<nB;const winB=higherIsBetter?nB>nA:nB<nA;
-      return`<div style="display:contents;">
-        <div style="padding:8px 10px;background:var(--bg-elevated);border-radius:6px;text-align:center;border:1px solid ${winA?'var(--border-accent)':'var(--border)'};font-weight:${winA?'700':'400'};color:${winA?'var(--accent)':'var(--text-primary)'};">${valA}</div>
-        <div style="padding:8px 4px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;display:flex;align-items:center;justify-content:center;">${label}</div>
-        <div style="padding:8px 10px;background:var(--bg-elevated);border-radius:6px;text-align:center;border:1px solid ${winB?'var(--border-accent)':'var(--border)'};font-weight:${winB?'700':'400'};color:${winB?'var(--accent)':'var(--text-primary)'};">${valB}</div>
-      </div>`;
+    function avatar(url,name){
+      if(url)return '<img src="'+url+'" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border-accent);">';
+      return '<div style="width:48px;height:48px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--accent);">'+(name[0]||'?').toUpperCase()+'</div>';
     }
-    function avatar(url,name){return url?`<img src="${url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border-accent);">`:`<div style="width:48px;height:48px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--accent);">${name[0]?.toUpperCase()||'?'}</div>`;}
-    el.innerHTML=`<div style="animation:fadeIn .3s ease both;">
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:16px;padding:14px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border-accent);">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">${avatar(tA,a)}<div style="font-size:13px;font-weight:700;">@${uA.name||a}</div><div style="font-size:11px;color:var(--text-muted);">ID ${uA.id}</div></div>
-        <div style="font-size:18px;color:var(--accent);font-weight:800;padding:0 8px;">VS</div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">${avatar(tB,b)}<div style="font-size:13px;font-weight:700;">@${uB.name||b}</div><div style="font-size:11px;color:var(--text-muted);">ID ${uB.id}</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;font-size:12px;">
-        ${col('a','Friends',(countA.friends||0).toLocaleString(),(countB.friends||0).toLocaleString())}
-        ${col('a','Followers',(countA.followers||0).toLocaleString(),(countB.followers||0).toLocaleString())}
-        ${col('a','Following',(countA.following||0).toLocaleString(),(countB.following||0).toLocaleString())}
-        ${col('a','Acc Age (yrs)',ageA,ageB,false)}
-      </div>
-    </div>`;
-  }catch(e){el.innerHTML=`<div style="color:var(--danger);font-size:13px;">Compare failed: ${e.message}</div>`;}
-}
+    function col(label,valA,valB,higherIsBetter){
+      var nA=parseFloat(valA)||0,nB=parseFloat(valB)||0;
+      var winA=higherIsBetter!==false?nA>nB:nA<nB,winB=higherIsBetter!==false?nB>nA:nB<nA;
+      var styleA='padding:8px 10px;background:var(--bg-elevated);border-radius:6px;text-align:center;border:1px solid '+(winA?'var(--border-accent)':'var(--border)')+';font-weight:'+(winA?'700':'400')+';color:'+(winA?'var(--accent)':'var(--text-primary)');
+      var styleB='padding:8px 10px;background:var(--bg-elevated);border-radius:6px;text-align:center;border:1px solid '+(winB?'var(--border-accent)':'var(--border)')+';font-weight:'+(winB?'700':'400')+';color:'+(winB?'var(--accent)':'var(--text-primary)');
+      return '<div style="'+styleA+'">'+valA+'</div><div style="padding:8px 4px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;">'+label+'</div><div style="'+styleB+'">'+valB+'</div>';
+    }
+    el.innerHTML='<div style="animation:fadeIn .3s ease both;">'
+      +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:16px;padding:14px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border-accent);">'
+      +'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">'+avatar(tA,a)+'<div style="font-size:13px;font-weight:700;">@'+(uA.name||a)+'</div><div style="font-size:11px;color:var(--text-muted);">ID '+uA.id+'</div></div>'
+      +'<div style="font-size:18px;color:var(--accent);font-weight:800;padding:0 8px;">VS</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">'+avatar(tB,b)+'<div style="font-size:13px;font-weight:700;">@'+(uB.name||b)+'</div><div style="font-size:11px;color:var(--text-muted);">ID '+uB.id+'</div></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;font-size:12px;">'
+      +col('Friends',(countA.friends||0).toLocaleString(),(countB.friends||0).toLocaleString())
+      +col('Followers',(countA.followers||0).toLocaleString(),(countB.followers||0).toLocaleString())
+      +col('Following',(countA.following||0).toLocaleString(),(countB.following||0).toLocaleString())
+      +col('Acc Age (yrs)',ageA,ageB,false)
+      +'</div></div>';
+  }catch(e){el.innerHTML='<div style="color:var(--danger);font-size:13px;">Compare failed: '+e.message+'</div>';}
 }
 
 // ── FRIEND MODAL ─────────────────────────
@@ -1769,4 +1766,4 @@ function setLanguage(){}
 function applyLanguage(){}
 </script>
 </body>
-</html>
+</html> 
