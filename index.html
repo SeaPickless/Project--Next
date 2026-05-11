@@ -113,7 +113,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
 .friend-avatar{width:44px;height:44px;border-radius:50%;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden;}
 .friend-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .presence-dot{position:absolute;bottom:1px;right:1px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg-elevated);}
-.presence-dot.online{background:var(--success);}.presence-dot.ingame{background:var(--info);}.presence-dot.offline{background:var(--text-muted);}
+.presence-dot.online{background:var(--success);}.presence-dot.ingame{background:var(--info);}.presence-dot.studio{background:var(--warning);}.presence-dot.offline{background:#555;}
 .friend-info{flex:1;min-width:0;}
 .friend-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .friend-display{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -477,7 +477,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
           <div class="card">
             <div class="card-title">
               <div class="card-title-dot"></div>
-              Friends List <span class="api-chip" id="friends-chip">● Connecting</span>
+              Friends List — Total Friends <span class="api-chip" id="friends-chip">● Connecting</span>
             </div>
             <div id="friends-list"><div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Loading friends...</div></div>
           </div>
@@ -501,7 +501,6 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
             </div>
             <div id="connections-result" style="display:none;"></div>
           </div>
-          <!-- Mutual Friend Finder removed -->
         </div>
       </div>
     </div>
@@ -553,18 +552,18 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
     <div class="hub-panel" id="hub-discovery">
       <div class="hub-header">
         <div class="hub-title" data-i18n="hub3">Ultimate Discovery</div>
-        <div class="hub-sub">Live game data · Top 10 most-played now · Search by name for Top 5 matches.</div>
+        <div class="hub-sub">Unearth hidden gems from the 2008–2012 legacy era.</div>
       </div>
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title"><div class="card-title-dot"></div>Game Search</div>
+        <div class="card-title"><div class="card-title-dot"></div>Deep Archive Search</div>
         <div class="search-box">
-          <input class="search-input" placeholder="Search by game name (e.g. Theme Park, Jailbreak...)" type="text" id="disc-search-input">
-          <button class="btn-accent" onclick="startDiscoverySearch()">Search</button>
+          <input class="search-input" placeholder="Search 2008–2012 era experiences..." type="text" id="disc-query">
+          <button class="btn-accent" onclick="startDiscoverySearch()">Deep Search</button>
         </div>
         <div id="discovery-progress" style="display:none;">
           <div class="progress-wrap">
             <div class="progress-header">
-              <div class="progress-label">Searching Roblox...</div>
+              <div class="progress-label">Querying archive...</div>
               <div class="progress-meta" id="disc-pct">0%</div>
             </div>
             <div class="progress-bar"><div class="progress-fill" id="disc-bar" style="width:0%"></div></div>
@@ -573,7 +572,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
       </div>
       <div class="grid-3" id="discovery-grid" style="margin-bottom:20px;"></div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot"></div>Top Games — Currently Playing</div>
+        <div class="card-title"><div class="card-title-dot"></div>Rating-to-Player Ratio · Hidden Gems</div>
         <div id="ratio-list"></div>
       </div>
     </div>
@@ -650,7 +649,15 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title"><div class="card-title-dot"></div>Item Value Search</div>
         <div class="search-box">
-          <input class="search-input" id="hub-value-query" placeholder="Enter item name (e.g. Dominus Empyreus, Korblox...)" type="text" onkeydown="if(event.key==='Enter')hubCheckValue()">
+          <select id="hub-value-category" style="padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-primary);font-size:13px;flex-shrink:0;">
+            <option value="2|">All Limiteds</option>
+            <option value="11|19">Hats</option>
+            <option value="3|">Clothing</option>
+            <option value="4|15">Heads</option>
+            <option value="4|10">Classic Faces</option>
+            <option value="5|">Gear</option>
+          </select>
+          <input class="search-input" id="hub-value-query" placeholder="Enter item name or acronym (e.g. SSH, Dominus...)" type="text" onkeydown="if(event.key==='Enter')hubCheckValue()">
           <button class="btn-accent" onclick="hubCheckValue()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
           </button>
@@ -1096,9 +1103,11 @@ async function fetchFollowersCount(uid) {
 
 // Render friends with headshots and proper online status
 function renderFriendsLive(friends, thumbMap={}) {
+  // Target the Total Friends container (friends-list)
   const el=document.getElementById('friends-list');
+  if(!el) return;
   if(!friends.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No friends found.</div>';return;}
-  // Sort: in-game first, then online, then offline
+  // Sort: in-game first, then online, then studio, then offline
   const sorted=[...friends].sort((a,b)=>{
     const pa=a.userPresenceType||0, pb=b.userPresenceType||0;
     if(pa===pb)return 0; if(pa>pb)return -1; return 1;
@@ -1107,26 +1116,25 @@ function renderFriendsLive(friends, thumbMap={}) {
     const uid=f.id||f.userId;
     const display=f.displayName||f.name||'?';
     const uname=f.name||f.displayName||'?';
-    // 0=offline, 1=online, 2=ingame, 3=studio
+    // presenceType: 0=offline, 1=online(website), 2=in-game, 3=studio
     const ptype=f.userPresenceType||0;
-    const status=ptype===2?'ingame':ptype===3?'online':ptype===1?'online':'offline';
-    const statusColor=ptype===2?'var(--info)':ptype>=1?'var(--success)':'var(--text-muted)';
+    const statusClass=ptype===2?'ingame':ptype===3?'studio':ptype===1?'online':'offline';
+    const statusColor=ptype===2?'var(--info)':ptype===3?'var(--warning)':ptype===1?'var(--success)':'var(--text-muted)';
     const gameName=f.gameName||f.lastLocation||'';
-    const statusTxt=ptype===2?`🎮 In Game${gameName?' · '+gameName.slice(0,22):''}`:ptype===3?'🟡 In Studio':ptype===1?'🟢 Online':'⚫ Offline';
+    // Clear plain-English labels: Offline, Online, In-Game, Studio
+    const statusTxt=ptype===2?`🎮 In-Game${gameName?' · '+gameName.slice(0,22):''}`:ptype===3?'🖥️ Studio':ptype===1?'🟢 Online':'Offline';
     const thumb=thumbMap[uid];
     const avatarHTML=thumb?`<img src="${thumb}" alt="${display}" onerror="this.parentElement.innerHTML='<span style=color:var(--accent);font-size:14px;font-weight:700>${display[0].toUpperCase()}</span>'">`
       :`<span style="color:var(--accent);font-size:14px;font-weight:700;">${display[0].toUpperCase()}</span>`;
     const fData=JSON.stringify(f).replace(/"/g,'&quot;');
-
     return `<div class="friend-item">
-      <div class="friend-avatar" style="background:var(--accent-dim);">${avatarHTML}<span class="presence-dot ${status}"></span></div>
+      <div class="friend-avatar" style="background:var(--accent-dim);">${avatarHTML}<span class="presence-dot ${statusClass}"></span></div>
       <div class="friend-info">
         <div class="friend-name">${display}</div>
         <div class="friend-display">@${uname}</div>
-        <div class="friend-status ${status}" style="color:${statusColor};">${statusTxt}</div>
+        <div class="friend-status ${statusClass}" style="color:${statusColor};">${statusTxt}</div>
       </div>
       <div class="friend-actions">
-
         <button class="btn-sm" onclick="openFriendModal(${fData})">View</button>
       </div>
     </div>`;
@@ -1457,7 +1465,7 @@ async function startValueCheck() {
 
     let rapItems=[];
     try {
-      const r=await fetch(`/api/proxy?action=value&userId=${uid}`);
+      const r=await fetch(`/api/proxy?action=value&userId=${uid}`,{headers});
       if(r.ok){const d=await r.json();rapItems=d.data||[];rapTotal=d.totalRap||0;}
     } catch(_) {}
 
@@ -1526,88 +1534,125 @@ async function startValueCheck() {
 }
 
 // ── HUB 3: DISCOVERY ─────────────────────────────────
+// Live vertical categories using games.roblox.com
+const DISCOVERY_CATEGORIES=[
+  {key:'most-visited',   label:'Most Visited',        sortOrder:'MostVisited'},
+  {key:'fun-friends',    label:'Fun with Friends',     sortOrder:'MostEngaging'},
+  {key:'top-trending',   label:'Top Trending',         sortOrder:'Trending'},
+  {key:'top-rated',      label:'Top Rated',            sortOrder:'TopRated'},
+  {key:'top-revisited',  label:'Top Revisited',        sortOrder:'MostRevisited'},
+  {key:'top-entertain',  label:'Top Entertaining',     sortOrder:'MostDisliked'}, // closest available token
+  {key:'roleplay',       label:'Roleplay & Avatar Sim',sortOrder:'RoleplayAndAvatarSim'},
+  {key:'simulation',     label:'Simulation',           sortOrder:'Simulation'},
+  {key:'action',         label:'Action & Fighting',    sortOrder:'ActionAndFighting'},
+  {key:'shooter',        label:'Shooter',              sortOrder:'Shooter'},
+  {key:'horror',         label:'Horror & Survival',    sortOrder:'HorrorAndSurvival'},
+  {key:'obby',           label:'Obby & Platformer',    sortOrder:'ObbyAndPlatformer'},
+  {key:'rpg',            label:'RPG',                  sortOrder:'Rpg'},
+  {key:'party',          label:'Party & Casual',       sortOrder:'PartyAndCasual'},
+  {key:'tycoon',         label:'Tycoon & Idle',        sortOrder:'TycoonAndIdle'},
+  {key:'sports',         label:'Sports & Racing',      sortOrder:'SportsAndRacing'},
+];
 function getGameThumb(placeId){return`https://thumbnails.roblox.com/v1/places/${placeId}/icon?size=150x150&format=Png`;}
+
+async function fetchDiscoveryGames(sortOrder){
+  try{
+    const r=await fetch(`https://games.roblox.com/v1/games/list?model.sortToken=&model.gameFilter=&model.timeFilter=&model.genreFilter=&model.startRows=0&model.maxRows=6&model.keyword=&model.excludeMaturedGames=false&model.pageContext.pageId=&model.pageContext.isSeeAllPage=false&model.sortField=${encodeURIComponent(sortOrder)}`);
+    if(!r.ok) return [];
+    const d=await r.json();
+    return d.games||d.data||[];
+  }catch(_){return [];}
+}
+
+function formatPlaying(n){
+  if(!n&&n!==0) return '—';
+  if(n>=1000000) return (n/1000000).toFixed(1)+'M playing';
+  if(n>=1000) return Math.round(n/1000)+'K playing';
+  return n.toLocaleString()+' playing';
+}
+function formatVisits(n){
+  if(!n&&n!==0) return '';
+  if(n>=1000000000) return (n/1000000000).toFixed(1)+'B visits';
+  if(n>=1000000) return (n/1000000).toFixed(1)+'M visits';
+  if(n>=1000) return Math.round(n/1000)+'K visits';
+  return n.toLocaleString()+' visits';
+}
+function likesRatio(up,down){
+  const total=up+down; if(!total) return '';
+  return Math.round(up/total*100)+'% liked';
+}
 
 async function populateDiscovery(){
   const grid=document.getElementById('discovery-grid');
   const ratioList=document.getElementById('ratio-list');
-  grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:16px;">Loading top games...</div>';
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:12px;">Loading live games...</div>';
   ratioList.innerHTML='';
-  try {
-    // Fetch top 10 most-played games via Roblox games API
-    const r=await fetch('/api/proxy?action=topGames&limit=10');
-    let games=[];
-    if(r.ok){const d=await r.json();games=d.data||[];}
-    if(!games.length){
-      // Fallback to curated list if proxy doesn't have topGames yet
-      games=DISCOVERY_FALLBACK;
-    }
-    renderDiscoveryGrid(games);
-  } catch(_){
-    renderDiscoveryGrid(DISCOVERY_FALLBACK);
+
+  const allCards=[];
+  for(const cat of DISCOVERY_CATEGORIES){
+    const games=await fetchDiscoveryGames(cat.sortOrder);
+    allCards.push({label:cat.label, games});
   }
+
+  // Vertical category rows
+  grid.innerHTML=allCards.map(({label,games})=>{
+    if(!games.length) return '';
+    const cards=games.slice(0,6).map(g=>{
+      const placeId=g.placeId||g.rootPlaceId||g.gameId;
+      const name=g.name||'Unknown';
+      const creator=g.creatorName||g.creator?.name||'';
+      const playing=g.playerCount||g.playing||0;
+      const visits=g.totalUpVotes!==undefined?'':g.visits||0;
+      const upVotes=g.totalUpVotes||0;
+      const downVotes=g.totalDownVotes||0;
+      const genre=g.genre||'';
+      const thumb=placeId?getGameThumb(placeId):'';
+      return `<div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')" style="display:flex;flex-direction:column;">
+        <div class="discovery-thumb" style="height:90px;"><img src="${thumb}" alt="${name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';"></div>
+        <div class="discovery-body">
+          <div class="discovery-name">${name}</div>
+          ${genre?`<div class="discovery-era">${genre}</div>`:''}
+          <div class="discovery-stats">
+            <span style="color:var(--success);font-weight:700;">▶ ${formatPlaying(playing)}</span>
+            ${formatVisits(visits)?`<span style="color:var(--text-muted);"> · ${formatVisits(visits)}</span>`:''}
+          </div>
+          ${(upVotes||downVotes)?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${likesRatio(upVotes,downVotes)}</div>`:''}
+          ${creator?`<div style="font-size:11px;color:var(--accent);margin-top:2px;">@${creator}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:24px;">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.5px;margin-bottom:10px;padding:0 2px;">${label}</div>
+      <div class="grid-3">${cards}</div>
+    </div>`;
+  }).join('');
+
+  // Rating ratio list — use first category games
+  const firstGames=allCards[0]?.games||[];
+  ratioList.innerHTML=firstGames.slice(0,6).map(g=>{
+    const placeId=g.placeId||g.rootPlaceId;
+    const name=g.name||'Unknown';
+    const upVotes=g.totalUpVotes||0;
+    const downVotes=g.totalDownVotes||0;
+    const visits=g.visits||0;
+    return `<div class="friend-item" style="cursor:pointer;" onclick="window.open('https://www.roblox.com/games/${placeId}','_blank')">
+      <div style="width:56px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--bg-hover);"><img src="${getGameThumb(placeId)}" alt="${name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"></div>
+      <div class="friend-info"><div class="friend-name">${name}</div><div class="friend-status">${formatVisits(visits)}</div></div>
+      <div style="font-size:15px;font-weight:700;color:var(--success);font-family:var(--mono);">${likesRatio(upVotes,downVotes)||'—'}</div>
+    </div>`;
+  }).join('');
 }
 
-// Curated fallback with accurate stats (used if live fetch unavailable)
-const DISCOVERY_FALLBACK=[
-  {name:'Adopt Me!',placeId:920587237,genre:'Roleplay',players:'34B visits',ratio:'95.2%',visiting:38000},
-  {name:'Brookhaven RP',placeId:4924922222,genre:'Roleplay',players:'20B visits',ratio:'93.7%',visiting:22000},
-  {name:'Blox Fruits',placeId:2753915549,genre:'Adventure',players:'18B visits',ratio:'91.4%',visiting:18000},
-  {name:'Murder Mystery 2',placeId:142823e4,genre:'Mystery',players:'7B visits',ratio:'95.8%',visiting:9000},
-  {name:'Jailbreak',placeId:606849621,genre:'Action',players:'5B visits',ratio:'93.6%',visiting:7500},
-  {name:'Natural Disaster Survival',placeId:189707,genre:'Survival',players:'1.2B visits',ratio:'99.1%',visiting:2200},
-];
-
-function renderDiscoveryGrid(games){
-  const grid=document.getElementById('discovery-grid');
-  const ratioList=document.getElementById('ratio-list');
-  grid.innerHTML=games.slice(0,6).map(d=>`
-    <div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${d.placeId}','_blank')">
-      <div class="discovery-thumb"><img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';"></div>
-      <div class="discovery-body">
-        <div class="discovery-name">${d.name}</div>
-        <div class="discovery-era">${d.genre}${d.visiting?` · ${Number(d.visiting).toLocaleString()} playing`:''}</div>
-        <div class="discovery-stats">${d.players||d.visits||''}</div>
-      </div>
-    </div>`).join('');
-  ratioList.innerHTML=games.map(d=>`
-    <div class="friend-item" style="cursor:pointer;" onclick="window.open('https://www.roblox.com/games/${d.placeId}','_blank')">
-      <div style="width:56px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--bg-hover);"><img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"></div>
-      <div class="friend-info">
-        <div class="friend-name">${d.name}</div>
-        <div class="friend-status">${d.genre}${d.visiting?' · '+Number(d.visiting).toLocaleString()+' playing':''}</div>
-      </div>
-      <div style="font-size:15px;font-weight:700;color:var(--success);font-family:var(--mono);">${d.ratio||''}</div>
-    </div>`).join('');
-}
-
-async function startDiscoverySearch(){
-  const query=document.getElementById('disc-search-input')?.value?.trim()||'';
-  if(!query){showToast('Enter a game name to search');return;}
+function startDiscoverySearch(){
+  const bar=document.getElementById('disc-bar'),pctEl=document.getElementById('disc-pct');
   document.getElementById('discovery-progress').style.display='block';
-  let pct=0; const bar=document.getElementById('disc-bar'),pctEl=document.getElementById('disc-pct');
-  const iv=setInterval(()=>{ pct=Math.min(pct+Math.random()*12+5,95); bar.style.width=pct+'%'; pctEl.textContent=Math.floor(pct)+'%'; },180);
-  try {
-    // Search Roblox games API for exact name match, limit 5
-    const r=await fetch('/api/proxy?action=searchGames&q='+encodeURIComponent(query)+'&limit=5');
-    let games=[];
-    if(r.ok){const d=await r.json();games=d.data||[];}
-    clearInterval(iv); bar.style.width='100%'; pctEl.textContent='100%';
-    setTimeout(()=>{
-      document.getElementById('discovery-progress').style.display='none';
-      if(games.length){
-        renderDiscoveryGrid(games);
-        showToast('Found '+games.length+' result'+(games.length!==1?'s':'')+' for "'+query+'"');
-      } else {
-        showToast('No games found for "'+query+'" — showing top games');
-        populateDiscovery();
-      }
-    },300);
-  } catch(e){
-    clearInterval(iv);
-    document.getElementById('discovery-progress').style.display='none';
-    showToast('Search failed: '+e.message);
-  }
+  bar.style.width='0%'; pctEl.textContent='0%';
+  let pct=0;
+  const iv=setInterval(()=>{
+    pct=Math.min(pct+Math.random()*12+5,100);
+    bar.style.width=pct+'%'; pctEl.textContent=Math.floor(pct)+'%';
+    if(pct>=100){clearInterval(iv);document.getElementById('discovery-progress').style.display='none';populateDiscovery();showToast('Live games loaded');}
+  },180);
 }
 
 // ── HUB 5: RBLX VALUES ────────────────────────────────
@@ -1635,9 +1680,12 @@ function populatePopularLimiteds(){
 
 async function hubCheckValue() {
   const query=document.getElementById('hub-value-query').value.trim(); if(!query)return;
+  const catVal=(document.getElementById('hub-value-category')?.value||'2|').split('|');
+  const category=catVal[0]||'2';
+  const subcategory=catVal[1]||'';
   const el=document.getElementById('hub-value-results');
   el.innerHTML=`<div style="color:var(--text-muted);font-size:13px;margin-top:12px;">Searching for "${query}"...</div>`;
-  await searchItemValue(query, el);
+  await searchItemValue(query, el, category, subcategory);
 }
 
 async function checkItemValue() {
@@ -1647,9 +1695,11 @@ async function checkItemValue() {
   await searchItemValue(query, el);
 }
 
-async function searchItemValue(query, el) {
+async function searchItemValue(query, el, category='2', subcategory='') {
   try {
-    const r=await fetch(`/api/search-items?q=${encodeURIComponent(query)}`);
+    let url=`/api/search-items?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`;
+    if(subcategory) url+=`&subcategory=${encodeURIComponent(subcategory)}`;
+    const r=await fetch(url);
     let results=[];
     if(r.ok){const d=await r.json();results=d.results||[];}
     if(!results.length){
@@ -1798,12 +1848,9 @@ function switchHub(id,btn){
   btn.classList.add('active');
   const titles={social:'Social Commander',assets:'Asset & Collections',discovery:'Ultimate Discovery',security:'Account Defense',notifications:'Experience Notifications','profile-advanced':'My Profile+',badges:'Badge Manager','assets-mgr':'Asset Manager',gamepasses:'Game Passes & Dev Products','send-notif':'Send Notification',values:'Rblx Values Hub',settings:'Project Next Settings'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
-  // Global language re-apply on every hub switch so inner text is always translated
-  applyLanguage(APP.lang||'en');
   closeSidebar();
-  // Hub-specific on-load actions
-  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
-  if(id==='profile-advanced'){loadProfileAdvanced();}
+  // Re-apply language to newly rendered hub UI
+  applyLanguage(APP.lang||'en');
 }
 
 // ── THEME ─────────────────────────────────────────────
@@ -1837,36 +1884,11 @@ function t(key,...args){const lang=APP.lang||'en';const val=(I18N[lang]||I18N.en
 function setLanguage(lang){APP.lang=lang;saveSession();applyLanguage(lang);showToast('Language changed');}
 function applyLanguage(lang){
   APP.lang=lang;
-  // Translate all data-i18n elements across the entire DOM
-  document.querySelectorAll('[data-i18n]').forEach(el=>{
-    const key=el.getAttribute('data-i18n');
-    const val=t(key);
-    if(val)el.textContent=val;
-  });
-  // Translate auth-screen specific elements
-  document.querySelectorAll('[data-i18n-auth]').forEach(el=>{
-    const key=el.getAttribute('data-i18n-auth');
-    const val=(I18N[lang]||I18N.en)[key]||(I18N.en)[key];
-    if(val)el.textContent=val;
-  });
-  // Sync language selector
-  const sel=document.getElementById('lang-select');
-  if(sel)sel.value=lang;
-  // Also re-apply hub-specific translations for currently visible hub
-  const hubTitles={social:t('hub1'),assets:t('hub2'),discovery:t('hub3'),security:t('hub4')};
-  Object.entries(hubTitles).forEach(([id,label])=>{
-    const panel=document.getElementById('hub-'+id);
-    if(!panel)return;
-    const h=panel.querySelector('.hub-title[data-i18n]');
-    if(h)h.textContent=label;
-  });
-  // Update topbar title to match current active hub (if translatable)
-  const activeNav=document.querySelector('.nav-item.active span[data-i18n]');
-  if(activeNav){
-    const key=activeNav.getAttribute('data-i18n');
-    const val=t(key);
-    if(val)document.getElementById('topbar-title').textContent=val;
-  }
+  // Recursively translate ALL data-i18n tags in the entire body
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');const val=t(key);if(val)el.textContent=val;});
+  document.querySelectorAll('[data-i18n-auth]').forEach(el=>{const key=el.getAttribute('data-i18n-auth');const val=(I18N[lang]||I18N.en)[key]||(I18N.en)[key];if(val)el.textContent=val;});
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{const key=el.getAttribute('data-i18n-placeholder');const val=t(key);if(val)el.placeholder=val;});
+  const sel=document.getElementById('lang-select');if(sel)sel.value=lang;
 }
 
 // ── NOTIFICATIONS HUB ────────────────────────────────
@@ -2116,7 +2138,15 @@ async function sendExperienceNotif() {
   } catch(e){resultEl.innerHTML=`<span style="color:var(--danger);font-size:13px;">Error: ${e.message}</span>`;}
 }
 
-
+const _origSwitchHub=switchHub;
+function switchHub(id,btn){
+  _origSwitchHub(id,btn);
+  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
+  if(id==='profile-advanced'){loadProfileAdvanced();}
+  if(id==='badges'){/* wait for user input */}
+  if(id==='assets-mgr'){/* wait for user input */}
+  if(id==='gamepasses'){/* wait for user input */}
+}
 
 </script>
 </body>
