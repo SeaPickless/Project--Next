@@ -448,60 +448,63 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
     <div class="hub-panel active" id="hub-social">
       <div class="hub-header">
         <div class="hub-title" data-i18n="hub1">Social Commander</div>
-        <div class="hub-sub">Live network data · Real friend graph from Roblox Open Cloud</div>
+        <div class="hub-sub">Roblox profile intelligence · User lookup · Account analytics</div>
       </div>
-      <div class="stat-grid">
-        <div class="stat-card" onclick="openAllFriends()">
-          <div class="stat-label" data-i18n="friendCount">Total Friends</div>
-          <div class="stat-val accent-text" id="stat-friends">—</div>
-          <div class="stat-sub" id="stat-friends-sub">Click to view all</div>
+
+      <!-- User Lookup -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>User Lookup</div>
+        <div class="search-box">
+          <input class="search-input" id="social-username-input" placeholder="Enter Roblox username..." type="text" onkeydown="if(event.key==='Enter')lookupUser()">
+          <button class="btn-accent" onclick="lookupUser()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Lookup
+          </button>
+        </div>
+        <div id="social-lookup-result" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- Stats grid: followers/friends/following from lookup -->
+      <div class="stat-grid" id="social-stat-grid" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-label">Friends</div>
+          <div class="stat-val accent-text" id="social-stat-friends">—</div>
+          <div class="stat-sub">Total</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label" data-i18n="onlineNow">Online Now</div>
-          <div class="stat-val" style="color:var(--success)" id="stat-online">—</div>
-          <div class="stat-sub" id="stat-online-sub">Fetching...</div>
-        </div>
-        <div class="stat-card" onclick="openPendingModal()">
-          <div class="stat-label">Pending Requests</div>
-          <div class="stat-val" style="color:var(--warning)" id="stat-pending">—</div>
-          <div class="stat-sub" id="stat-pending-sub">Click to view</div>
-        </div>
-        <div class="stat-card" onclick="openFollowersModal()">
           <div class="stat-label">Followers</div>
-          <div class="stat-val" id="stat-followers">—</div>
-          <div class="stat-sub" id="stat-followers-sub">Click to view</div>
+          <div class="stat-val" style="color:var(--success)" id="social-stat-followers">—</div>
+          <div class="stat-sub">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Following</div>
+          <div class="stat-val" id="social-stat-following">—</div>
+          <div class="stat-sub">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Account Age</div>
+          <div class="stat-val" style="color:var(--warning);font-size:18px;" id="social-stat-age">—</div>
+          <div class="stat-sub">Years</div>
         </div>
       </div>
-      <div class="grid-2">
-        <div>
-          <div class="card">
-            <div class="card-title">
-              <div class="card-title-dot"></div>
-              Friends List — Total Friends <span class="api-chip" id="friends-chip">● Connecting</span>
+
+      <!-- Connections Finder -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title"><div class="card-title-dot"></div>Connections Finder</div>
+        <div class="search-box">
+          <input class="search-input" id="connections-input" placeholder="Enter username to find connection path..." type="text">
+          <button class="btn-accent" onclick="startConnectionScan()">Scan</button>
+        </div>
+        <div id="connections-progress" style="display:none;">
+          <div class="progress-wrap">
+            <div class="progress-header">
+              <div class="progress-label" id="conn-label">Scanning network...</div>
+              <div class="progress-meta" id="conn-pct">0%</div>
             </div>
-            <div id="friends-list"><div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Loading friends...</div></div>
+            <div class="progress-bar"><div class="progress-fill" id="conn-bar" style="width:0%"></div></div>
+            <div class="progress-sub" id="conn-time">Estimated: calculating...</div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:16px;">
-          <div class="card">
-            <div class="card-title"><div class="card-title-dot"></div>Connections Finder</div>
-            <div class="search-box">
-              <input class="search-input" id="connections-input" placeholder="e.g. MadamPokai" type="text">
-              <button class="btn-accent" onclick="startConnectionScan()">Scan</button>
-            </div>
-            <div id="connections-progress" style="display:none;">
-              <div class="progress-wrap">
-                <div class="progress-header">
-                  <div class="progress-label" id="conn-label">Scanning network...</div>
-                  <div class="progress-meta" id="conn-pct">0%</div>
-                </div>
-                <div class="progress-bar"><div class="progress-fill" id="conn-bar" style="width:0%"></div></div>
-                <div class="progress-sub" id="conn-time">Estimated: calculating...</div>
-              </div>
-            </div>
-            <div id="connections-result" style="display:none;"></div>
-          </div>
-        </div>
+        <div id="connections-result" style="display:none;"></div>
       </div>
     </div>
 
@@ -1033,7 +1036,7 @@ async function launchApp() {
   showScreen('app'); applyLanguage(APP.lang); populateAll(); showToast('Welcome back, @'+APP.user.username+' ✦');
 }
 function populateAll() {
-  updateProfile(); populateDiscovery(); populateSecurity(); populateSessions(); populatePrivacy(); populateSettingsToggles(); fetchLiveFriends(); populatePopularLimiteds(); restoreTheme();
+  updateProfile(); populateDiscovery(); populateSecurity(); populateSessions(); populatePrivacy(); populateSettingsToggles(); populatePopularLimiteds(); restoreTheme();
 }
 function updateProfile() {
   const user=APP.user; if(!user)return;
@@ -1044,104 +1047,96 @@ function updateProfile() {
   const tag=document.getElementById('sidebar-tag'); if(tag) tag.textContent='● Online · ID '+(user.userId||'—');
 }
 
-// ── LIVE FRIENDS ─────────────────────────────────────
-async function fetchLiveFriends() {
-  if(!APP.user||!APP.user.userId){setChip('friends-chip','warn','● No userId');return;}
-  const uid=APP.user.userId;
-  const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
+// ── SOCIAL COMMANDER: USER LOOKUP ────────────────────
+async function lookupUser() {
+  const input = document.getElementById('social-username-input');
+  const username = input.value.trim();
+  if (!username) return;
+  const el = document.getElementById('social-lookup-result');
+  el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">Looking up @${username}...</div>`;
+  document.getElementById('social-stat-grid').style.display = 'none';
+
   try {
-    let friends=[];
-    // Use centralized proxy (handles presence + thumbnails server-side)
+    // Resolve username → userId
+    const res = await fetch('https://users.roblox.com/v1/usernames/users', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({usernames:[username], excludeBannedUsers:false})
+    });
+    const ud = await res.json();
+    const user = (ud.data||[])[0];
+    if (!user) { el.innerHTML = `<div style="color:var(--danger);font-size:13px;">User "<strong>${username}</strong>" not found.</div>`; return; }
+    const uid = user.id;
+
+    // Fetch full profile + counts in parallel
+    const [profR, countR, presR] = await Promise.allSettled([
+      fetch(`https://users.roblox.com/v1/users/${uid}`).then(r=>r.json()),
+      fetch(`/api/proxy?action=count&userId=${uid}`).then(r=>r.json()),
+      fetch(`/api/proxy?action=presence&userIds=${uid}`).then(r=>r.json()),
+    ]);
+
+    const prof = profR.status==='fulfilled' ? profR.value : {};
+    const counts = countR.status==='fulfilled' ? countR.value : {};
+    const pres = presR.status==='fulfilled' ? (presR.value.data||[])[0] : null;
+
+    // Avatar headshot
+    let avatarUrl = '';
     try {
-      const r=await fetch(`/api/proxy?action=friends&userId=${uid}`,{headers});
-      if(r.ok){const d=await r.json();friends=d.data||[];}
+      const tr = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=180x180&format=Png&isCircular=true`);
+      const td = await tr.json();
+      avatarUrl = (td.data||[])[0]?.imageUrl || '';
     } catch(_) {}
-    APP.friends=friends;
-    // Thumbnails already embedded by proxy in thumbnailUrl field
-    const thumbMap={};
-    friends.forEach(f=>{if(f.thumbnailUrl)thumbMap[f.id||f.userId]=f.thumbnailUrl;});
-    renderFriendsLive(friends, thumbMap);
-    setChip('friends-chip','live','● Live');
-    document.getElementById('stat-friends').textContent=friends.length;
-    document.getElementById('stat-friends-sub').textContent='Click to view all';
-    const online=friends.filter(f=>(f.userPresenceType||0)>0).length;
-    document.getElementById('stat-online').textContent=online;
-    document.getElementById('stat-online-sub').textContent='Online now';
-    // Fetch pending/followers via proxy
-    fetchPendingCount(uid); fetchFollowersCount(uid);
+
+    // Account age
+    const created = prof.created ? new Date(prof.created) : null;
+    const ageYears = created ? ((Date.now() - created) / (1000*60*60*24*365.25)).toFixed(1) : '?';
+    const joinDate = created ? created.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) : '?';
+
+    // Presence
+    const ptype = pres?.userPresenceType || 0;
+    const presLabel = ptype===2?`🎮 In-Game${pres.lastLocation?' · '+pres.lastLocation:''}`:ptype===3?'🖥️ Studio':ptype===1?'🟢 Online':'⚫ Offline';
+    const presColor = ptype===2?'var(--info)':ptype===3?'var(--warning)':ptype===1?'var(--success)':'var(--text-muted)';
+
+    const isBanned = prof.isBanned;
+    const displayName = prof.displayName || prof.name || username;
+    const description = prof.description || '';
+
+    el.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="flex-shrink:0;width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--accent-dim);border:2px solid var(--border-accent);display:flex;align-items:center;justify-content:center;">
+          ${avatarUrl ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${displayName}">` : `<span style="font-size:28px;font-weight:700;color:var(--accent);">${displayName[0].toUpperCase()}</span>`}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+            <span style="font-size:17px;font-weight:700;color:var(--text-primary);">${displayName}</span>
+            ${isBanned?'<span style="font-size:10px;background:rgba(231,76,60,.2);color:var(--danger);padding:2px 6px;border-radius:4px;font-weight:700;">BANNED</span>':''}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@${prof.name||username} · ID ${uid}</div>
+          <div style="font-size:12px;font-weight:600;color:${presColor};margin-bottom:8px;">${presLabel}</div>
+          ${description?`<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;max-height:52px;overflow:hidden;margin-bottom:8px;">${description.slice(0,180)}${description.length>180?'…':''}</div>`:''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">
+            <span>📅 Joined ${joinDate}</span>
+            <span>·</span>
+            <span>⏱ ${ageYears} yrs old</span>
+          </div>
+          <div style="margin-top:10px;">
+            <a href="https://www.roblox.com/users/${uid}/profile" target="_blank" class="value-link" style="font-size:12px;">View on Roblox ↗</a>
+          </div>
+        </div>
+      </div>`;
+
+    // Populate stat cards
+    document.getElementById('social-stat-grid').style.display = '';
+    document.getElementById('social-stat-friends').textContent = (counts.friends||0).toLocaleString();
+    document.getElementById('social-stat-followers').textContent = (counts.followers||0).toLocaleString();
+    document.getElementById('social-stat-following').textContent = (counts.following||0).toLocaleString();
+    document.getElementById('social-stat-age').textContent = ageYears;
+
   } catch(e) {
-    setChip('friends-chip','warn','● Proxy needed');
-    document.getElementById('stat-friends').textContent='—';
-    document.getElementById('stat-friends-sub').textContent='CORS restricted';
-    document.getElementById('friends-list').innerHTML=`<div style="padding:16px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border);"><div style="font-size:13px;font-weight:600;color:var(--warning);margin-bottom:6px;">⚠ Proxy Error</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Could not load friends. Make sure <code style="font-family:var(--mono);">ROBLOSECURITY</code> environment variable is set in your Vercel project settings. Your userId: <strong>${APP.user.userId}</strong></div></div>`;
-    document.getElementById('stat-online').textContent='—';
-    document.getElementById('stat-pending').textContent='—';
-    document.getElementById('stat-followers').textContent='—';
+    el.innerHTML = `<div style="color:var(--danger);font-size:13px;">Error: ${e.message}</div>`;
   }
 }
 
-async function fetchPendingCount(uid) {
-  try {
-    const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
-    // Try proxy first (proxy handles auth-gated pending endpoint)
-    let count=0;
-    try {
-      const r=await fetch(`/api/proxy?action=pending&userId=${uid}`,{headers});
-      if(r.ok){const d=await r.json();count=(d.data||[]).length;}
-    } catch(_) {}
-    document.getElementById('stat-pending').textContent=count;
-  } catch(_){document.getElementById('stat-pending').textContent='—';}
-}
-async function fetchFollowersCount(uid) {
-  try {
-    const headers=APP.rbxToken?{Authorization:'Bearer '+APP.rbxToken}:{};
-    const r=await fetch(`/api/proxy?action=count&userId=${uid}`,{headers});
-    if(r.ok){const d=await r.json();document.getElementById('stat-followers').textContent=(d.followers||0).toLocaleString();return;}
-  } catch(_){}
-  document.getElementById('stat-followers').textContent='—';
-}
-
-// Render friends with headshots and proper online status
-function renderFriendsLive(friends, thumbMap={}) {
-  // Target the Total Friends container (friends-list)
-  const el=document.getElementById('friends-list');
-  if(!el) return;
-  if(!friends.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No friends found.</div>';return;}
-  // Sort: in-game first, then online, then studio, then offline
-  const sorted=[...friends].sort((a,b)=>{
-    const pa=a.userPresenceType||0, pb=b.userPresenceType||0;
-    if(pa===pb)return 0; if(pa>pb)return -1; return 1;
-  });
-  el.innerHTML=sorted.slice(0,20).map(f=>{
-    const uid=f.id||f.userId;
-    const display=f.displayName||f.name||'?';
-    const uname=f.name||f.displayName||'?';
-    // presenceType: 0=offline, 1=online(website), 2=in-game, 3=studio
-    const ptype=f.userPresenceType||0;
-    const statusClass=ptype===2?'ingame':ptype===3?'studio':ptype===1?'online':'offline';
-    const statusColor=ptype===2?'var(--info)':ptype===3?'var(--warning)':ptype===1?'var(--success)':'var(--text-muted)';
-    const gameName=f.gameName||f.lastLocation||'';
-    // Clear plain-English labels: Offline, Online, In-Game, Studio
-    const statusTxt=ptype===2?`🎮 In-Game${gameName?' · '+gameName.slice(0,22):''}`:ptype===3?'🖥️ Studio':ptype===1?'🟢 Online':'Offline';
-    const thumb=thumbMap[uid];
-    const avatarHTML=thumb?`<img src="${thumb}" alt="${display}" onerror="this.parentElement.innerHTML='<span style=color:var(--accent);font-size:14px;font-weight:700>${display[0].toUpperCase()}</span>'">`
-      :`<span style="color:var(--accent);font-size:14px;font-weight:700;">${display[0].toUpperCase()}</span>`;
-    const fData=JSON.stringify(f).replace(/"/g,'&quot;');
-    return `<div class="friend-item">
-      <div class="friend-avatar" style="background:var(--accent-dim);">${avatarHTML}<span class="presence-dot ${statusClass}"></span></div>
-      <div class="friend-info">
-        <div class="friend-name">${display}</div>
-        <div class="friend-display">@${uname}</div>
-        <div class="friend-status ${statusClass}" style="color:${statusColor};">${statusTxt}</div>
-      </div>
-      <div class="friend-actions">
-        <button class="btn-sm" onclick="openFriendModal(${fData})">View</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// Only accept/decline are kept — unfriend/block/unblock removed (view-only mode)
 
 async function acceptFriendRequest(btn, uid, display) {
   btn.disabled=true; btn.textContent='...';
@@ -1849,8 +1844,9 @@ function switchHub(id,btn){
   const titles={social:'Social Commander',assets:'Asset & Collections',discovery:'Ultimate Discovery',security:'Account Defense',notifications:'Experience Notifications','profile-advanced':'My Profile+',badges:'Badge Manager','assets-mgr':'Asset Manager',gamepasses:'Game Passes & Dev Products','send-notif':'Send Notification',values:'Rblx Values Hub',settings:'Project Next Settings'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
   closeSidebar();
-  // Re-apply language to newly rendered hub UI
   applyLanguage(APP.lang||'en');
+  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
+  if(id==='profile-advanced'){loadProfileAdvanced();}
 }
 
 // ── THEME ─────────────────────────────────────────────
@@ -2138,15 +2134,7 @@ async function sendExperienceNotif() {
   } catch(e){resultEl.innerHTML=`<span style="color:var(--danger);font-size:13px;">Error: ${e.message}</span>`;}
 }
 
-const _origSwitchHub=switchHub;
-function switchHub(id,btn){
-  _origSwitchHub(id,btn);
-  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
-  if(id==='profile-advanced'){loadProfileAdvanced();}
-  if(id==='badges'){/* wait for user input */}
-  if(id==='assets-mgr'){/* wait for user input */}
-  if(id==='gamepasses'){/* wait for user input */}
-}
+
 
 </script>
 </body>
