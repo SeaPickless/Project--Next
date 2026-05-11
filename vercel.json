@@ -1,10 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/proxy.js",        "use": "@vercel/node", "config": { "runtime": "nodejs20.x" } },
-    { "src": "api/search-items.js", "use": "@vercel/node", "config": { "runtime": "nodejs20.x" } },
-    { "src": "index.html",          "use": "@vercel/static" },
-    { "src": "style.css",           "use": "@vercel/static" }
+    { "src": "api/proxy.js",  "use": "@vercel/node" },
+    { "src": "index.html",   "use": "@vercel/static" }
   ],
   "routes": [
     {
@@ -16,16 +14,6 @@
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }
     },
-    {
-      "src": "/api/search-items",
-      "dest": "/api/search-items.js",
-      "headers": {
-        "Access-Control-Allow-Origin":  "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    },
-    { "src": "/style.css", "dest": "/style.css" },
-    { "src": "/(.*)",      "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
