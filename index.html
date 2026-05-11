@@ -90,6 +90,17 @@ body.perf-mode *{animation:none !important;transition:none !important;}
 .auth-err{color:var(--danger);font-size:12px;margin-top:10px;text-align:center;min-height:18px;}
 .auth-divider{text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;}
 
+/* ═══════════════ BRANDED AUTH BUTTONS ═══════════════ */
+.btn-google-branded,.btn-roblox-branded{width:100%;padding:13px 18px;border:none;border-radius:var(--radius);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .15s,box-shadow .2s;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;}
+.btn-google-branded{background:#fff;color:#1f1f1f;}
+.btn-google-branded:hover{opacity:.92;box-shadow:0 4px 20px rgba(255,255,255,0.2);transform:translateY(-1px);}
+.btn-google-branded:active{transform:scale(.98);}
+.btn-google-branded:disabled{opacity:.5;cursor:not-allowed;}
+.btn-roblox-branded{background:#e13838;color:#fff;}
+.btn-roblox-branded:hover{opacity:.92;box-shadow:0 4px 20px rgba(225,56,56,0.4);transform:translateY(-1px);}
+.btn-roblox-branded:active{transform:scale(.98);}
+.btn-roblox-branded:disabled{opacity:.5;cursor:not-allowed;}
+
 /* ═══════════════ LOADING SCREEN ═══════════════ */
 #loading-screen{min-height:100vh;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;position:fixed;inset:0;z-index:900;background:var(--bg-base);overflow:hidden;}
 #loading-screen.active{display:flex!important;}
@@ -1884,7 +1895,6 @@ async function searchItemValue(query,el,category='2',subcategory=''){
     // 4. Fetch thumbnails via proxy or direct
     const allIds=merged.map(m=>m.itemId).filter(Boolean);
     let thumbMap={};
-    try{
     // FIX #1+5: Route through /api/proxy to avoid CORS; thumbnails now 420x420
     const ids=allIds.slice(0,30).join(',');
     try{
@@ -2305,4 +2315,4 @@ function setLanguage(){}
 function applyLanguage(){}
 </script>
 </body>
-</html>
+</html> 
