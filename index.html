@@ -1820,6 +1820,42 @@ function runSecurityScan(){
   const iv=setInterval(()=>{pct=Math.min(pct+Math.random()*15+5,100);bar.style.width=pct+'%';if(pct>=100){clearInterval(iv);document.getElementById('security-progress').style.display='none';showToast('Security scan complete · Score: 82/100');}},200);
 }
 
+// ── SIDEBAR & HUB NAVIGATION ─────────────────────────────────────────
+function switchHub(hubId, navItem) {
+  // Hide all hub panels
+  document.querySelectorAll('.hub-panel').forEach(p => p.classList.remove('active'));
+  // Deactivate all nav items
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  // Show the target hub
+  const panel = document.getElementById('hub-' + hubId);
+  if (panel) panel.classList.add('active');
+  // Mark nav item as active
+  if (navItem) navItem.classList.add('active');
+  // Close sidebar on mobile after switching
+  closeSidebar();
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.contains('open');
+  if (isOpen) {
+    sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('show');
+  } else {
+    sidebar.classList.add('open');
+    if (overlay) overlay.classList.add('show');
+  }
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('show');
+}
+
 </script>
 </body>
 </html>
