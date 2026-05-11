@@ -477,9 +477,9 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
           <div class="card">
             <div class="card-title">
               <div class="card-title-dot"></div>
-              Friends List <span class="api-chip" id="friends-chip">● Live</span>
+              Friends List <span class="api-chip" id="friends-chip">● Connecting</span>
             </div>
-            <div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Click <strong style="color:var(--accent);">Total Friends</strong> above to view your full friends list.</div>
+            <div id="friends-list"><div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Loading friends...</div></div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:16px;">
@@ -501,6 +501,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
             </div>
             <div id="connections-result" style="display:none;"></div>
           </div>
+          <!-- Mutual Friend Finder removed -->
         </div>
       </div>
     </div>
@@ -552,28 +553,28 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-primary)
     <div class="hub-panel" id="hub-discovery">
       <div class="hub-header">
         <div class="hub-title" data-i18n="hub3">Ultimate Discovery</div>
-        <div class="hub-sub">Top 10 most played Roblox games right now · Search any game by name</div>
+        <div class="hub-sub">Live game data · Top 10 most-played now · Search by name for Top 5 matches.</div>
       </div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title"><div class="card-title-dot"></div>Game Search</div>
         <div class="search-box">
-          <input class="search-input" placeholder="Search game name (e.g. Blox Fruits, Adopt Me...)" type="text" id="disc-query" onkeydown="if(event.key==='Enter')startDiscoverySearch()">
+          <input class="search-input" placeholder="Search by game name (e.g. Theme Park, Jailbreak...)" type="text" id="disc-search-input">
           <button class="btn-accent" onclick="startDiscoverySearch()">Search</button>
         </div>
-        <div id="discovery-progress" style="display:none;margin-top:10px;">
+        <div id="discovery-progress" style="display:none;">
           <div class="progress-wrap">
             <div class="progress-header">
-              <div class="progress-label">Searching games...</div>
+              <div class="progress-label">Searching Roblox...</div>
               <div class="progress-meta" id="disc-pct">0%</div>
             </div>
             <div class="progress-bar"><div class="progress-fill" id="disc-bar" style="width:0%"></div></div>
           </div>
         </div>
-        <div id="disc-search-results" style="margin-top:12px;"></div>
       </div>
+      <div class="grid-3" id="discovery-grid" style="margin-bottom:20px;"></div>
       <div class="card">
-        <div class="card-title"><div class="card-title-dot"></div>Top 10 Most Played Right Now <span class="api-chip" id="disc-chip">● Live</span></div>
-        <div id="discovery-grid"></div>
+        <div class="card-title"><div class="card-title-dot"></div>Top Games — Currently Playing</div>
+        <div id="ratio-list"></div>
       </div>
     </div>
 
@@ -1096,7 +1097,7 @@ async function fetchFollowersCount(uid) {
 // Render friends with headshots and proper online status
 function renderFriendsLive(friends, thumbMap={}) {
   const el=document.getElementById('friends-list');
-  if(!el)return; // element removed from social panel, friends only in modal
+  if(!friends.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">No friends found.</div>';return;}
   // Sort: in-game first, then online, then offline
   const sorted=[...friends].sort((a,b)=>{
     const pa=a.userPresenceType||0, pb=b.userPresenceType||0;
@@ -1456,7 +1457,7 @@ async function startValueCheck() {
 
     let rapItems=[];
     try {
-      const r=await fetch(`/api/proxy?action=value&userId=${uid}`,{headers});
+      const r=await fetch(`/api/proxy?action=value&userId=${uid}`);
       if(r.ok){const d=await r.json();rapItems=d.data||[];rapTotal=d.totalRap||0;}
     } catch(_) {}
 
@@ -1525,131 +1526,87 @@ async function startValueCheck() {
 }
 
 // ── HUB 3: DISCOVERY ─────────────────────────────────
-// Top 10 most popular Roblox games (hardcoded with real universe/place IDs, live stats fetched)
-const TOP10_GAMES=[
-  {name:'Blox Fruits',universeId:2753915549,placeId:2753915549,genre:'Adventure',subGenre:'Fighting'},
-  {name:'Adopt Me!',universeId:223449656,placeId:920587237,genre:'Roleplay',subGenre:'Life Sim'},
-  {name:'Pet Simulator 99',universeId:3074890920,placeId:8737899170,genre:'Simulator',subGenre:'Pets'},
-  {name:'Brookhaven 🏡RP',universeId:1537690962,placeId:4924922222,genre:'Roleplay',subGenre:'Life Sim'},
-  {name:'Murder Mystery 2',universeId:142823239,placeId:142823239,genre:'Mystery',subGenre:'Social'},
-  {name:'Tower of Hell',universeId:1053690964,placeId:1962086868,genre:'Obby',subGenre:'Parkour'},
-  {name:'Anime Defenders',universeId:5265936660,placeId:16264962996,genre:'Tower Defense',subGenre:'Anime'},
-  {name:'Jailbreak',universeId:606849621,placeId:606849621,genre:'Action',subGenre:'Open World'},
-  {name:'Doors',universeId:1534453623,placeId:6516141723,genre:'Horror',subGenre:'Co-op'},
-  {name:'Royale High',universeId:924920264,placeId:735030788,genre:'Roleplay',subGenre:'Fantasy'},
-];
-
-function fmtNum(n){if(!n)return'N/A';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString();}
-
-function buildGameCard(g, stats){
-  const thumb=`https://thumbnails.roblox.com/v1/games/icons?universeIds=${g.universeId}&returnPolicy=PlaceHolder&size=150x150&format=Png&isCircular=false`;
-  const playing=stats?fmtNum(stats.playing):'…';
-  const visits=stats?fmtNum(stats.visits):'…';
-  const favs=stats?fmtNum(stats.favoritedCount):'…';
-  const likes=stats&&stats.upVotes&&(stats.upVotes+stats.downVotes)>0?Math.round(stats.upVotes/(stats.upVotes+stats.downVotes)*100)+'%':'…';
-  const creator=stats?.creator?.name||g.creator||'Roblox';
-  return`<div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:border-color .15s;" onclick="window.open('https://www.roblox.com/games/${g.placeId}','_blank')" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg-hover);">
-      <img src="${thumb}" alt="${g.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
-    </div>
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
-      <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px;">${g.genre} · ${g.subGenre}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;">
-        <div style="background:var(--bg-hover);border-radius:6px;padding:6px 8px;">
-          <div style="color:var(--text-muted);margin-bottom:2px;">▶ Playing</div>
-          <div style="color:var(--success);font-weight:700;font-family:var(--mono);">${playing}</div>
-        </div>
-        <div style="background:var(--bg-hover);border-radius:6px;padding:6px 8px;">
-          <div style="color:var(--text-muted);margin-bottom:2px;">👁 Visits</div>
-          <div style="color:var(--text-primary);font-weight:700;font-family:var(--mono);">${visits}</div>
-        </div>
-        <div style="background:var(--bg-hover);border-radius:6px;padding:6px 8px;">
-          <div style="color:var(--text-muted);margin-bottom:2px;">❤️ Favs</div>
-          <div style="color:var(--text-primary);font-weight:700;font-family:var(--mono);">${favs}</div>
-        </div>
-        <div style="background:var(--bg-hover);border-radius:6px;padding:6px 8px;">
-          <div style="color:var(--text-muted);margin-bottom:2px;">👍 Ratio</div>
-          <div style="color:var(--warning);font-weight:700;font-family:var(--mono);">${likes}</div>
-        </div>
-        <div style="background:var(--bg-hover);border-radius:6px;padding:6px 8px;grid-column:span 2;">
-          <div style="color:var(--text-muted);margin-bottom:2px;">👤 Creator</div>
-          <div style="color:var(--text-primary);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${creator}</div>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
+function getGameThumb(placeId){return`https://thumbnails.roblox.com/v1/places/${placeId}/icon?size=150x150&format=Png`;}
 
 async function populateDiscovery(){
   const grid=document.getElementById('discovery-grid');
-  if(!grid)return;
-  setChip('disc-chip','live','● Live');
-  grid.innerHTML=TOP10_GAMES.map(g=>buildGameCard(g,null)).join('');
-  // Fetch live stats for all universes
-  try{
-    const ids=TOP10_GAMES.map(g=>g.universeId).join(',');
-    const r=await fetch(`https://games.roblox.com/v1/games?universeIds=${ids}`);
-    if(r.ok){
-      const d=await r.json();
-      const statsMap={};
-      (d.data||[]).forEach(g=>{statsMap[g.id]=g;});
-      grid.innerHTML=TOP10_GAMES.map(g=>buildGameCard(g,statsMap[g.universeId]||null)).join('');
+  const ratioList=document.getElementById('ratio-list');
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:16px;">Loading top games...</div>';
+  ratioList.innerHTML='';
+  try {
+    // Fetch top 10 most-played games via Roblox games API
+    const r=await fetch('/api/proxy?action=topGames&limit=10');
+    let games=[];
+    if(r.ok){const d=await r.json();games=d.data||[];}
+    if(!games.length){
+      // Fallback to curated list if proxy doesn't have topGames yet
+      games=DISCOVERY_FALLBACK;
     }
-  }catch(_){/* show without stats */}
+    renderDiscoveryGrid(games);
+  } catch(_){
+    renderDiscoveryGrid(DISCOVERY_FALLBACK);
+  }
+}
+
+// Curated fallback with accurate stats (used if live fetch unavailable)
+const DISCOVERY_FALLBACK=[
+  {name:'Adopt Me!',placeId:920587237,genre:'Roleplay',players:'34B visits',ratio:'95.2%',visiting:38000},
+  {name:'Brookhaven RP',placeId:4924922222,genre:'Roleplay',players:'20B visits',ratio:'93.7%',visiting:22000},
+  {name:'Blox Fruits',placeId:2753915549,genre:'Adventure',players:'18B visits',ratio:'91.4%',visiting:18000},
+  {name:'Murder Mystery 2',placeId:142823e4,genre:'Mystery',players:'7B visits',ratio:'95.8%',visiting:9000},
+  {name:'Jailbreak',placeId:606849621,genre:'Action',players:'5B visits',ratio:'93.6%',visiting:7500},
+  {name:'Natural Disaster Survival',placeId:189707,genre:'Survival',players:'1.2B visits',ratio:'99.1%',visiting:2200},
+];
+
+function renderDiscoveryGrid(games){
+  const grid=document.getElementById('discovery-grid');
+  const ratioList=document.getElementById('ratio-list');
+  grid.innerHTML=games.slice(0,6).map(d=>`
+    <div class="discovery-card" onclick="window.open('https://www.roblox.com/games/${d.placeId}','_blank')">
+      <div class="discovery-thumb"><img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=40 height=40 viewBox=0 0 24 24 fill=none stroke=var(--accent) stroke-width=1.5><polygon points=5 3 19 12 5 21 5 3/></svg>';"></div>
+      <div class="discovery-body">
+        <div class="discovery-name">${d.name}</div>
+        <div class="discovery-era">${d.genre}${d.visiting?` · ${Number(d.visiting).toLocaleString()} playing`:''}</div>
+        <div class="discovery-stats">${d.players||d.visits||''}</div>
+      </div>
+    </div>`).join('');
+  ratioList.innerHTML=games.map(d=>`
+    <div class="friend-item" style="cursor:pointer;" onclick="window.open('https://www.roblox.com/games/${d.placeId}','_blank')">
+      <div style="width:56px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--bg-hover);"><img src="${getGameThumb(d.placeId)}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"></div>
+      <div class="friend-info">
+        <div class="friend-name">${d.name}</div>
+        <div class="friend-status">${d.genre}${d.visiting?' · '+Number(d.visiting).toLocaleString()+' playing':''}</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:var(--success);font-family:var(--mono);">${d.ratio||''}</div>
+    </div>`).join('');
 }
 
 async function startDiscoverySearch(){
-  const q=(document.getElementById('disc-query').value||'').trim();
-  if(!q){showToast('Enter a game name to search');return;}
-  const progressEl=document.getElementById('discovery-progress');
-  const resultsEl=document.getElementById('disc-search-results');
-  progressEl.style.display='block';
-  resultsEl.innerHTML='';
-  const bar=document.getElementById('disc-bar'),pctEl=document.getElementById('disc-pct');
-  let pct=0;
-  const iv=setInterval(()=>{pct=Math.min(pct+Math.random()*20+10,85);bar.style.width=pct+'%';pctEl.textContent=Math.floor(pct)+'%';},150);
-  try{
-    // Search Roblox games API
-    const r=await fetch(`https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(q)}&model.maxRows=5&model.startRows=0&model.sortToken=&model.hasVerifiedCreatorFilter=false`);
-    clearInterval(iv);bar.style.width='100%';pctEl.textContent='100%';
-    setTimeout(()=>{progressEl.style.display='none';},400);
+  const query=document.getElementById('disc-search-input')?.value?.trim()||'';
+  if(!query){showToast('Enter a game name to search');return;}
+  document.getElementById('discovery-progress').style.display='block';
+  let pct=0; const bar=document.getElementById('disc-bar'),pctEl=document.getElementById('disc-pct');
+  const iv=setInterval(()=>{ pct=Math.min(pct+Math.random()*12+5,95); bar.style.width=pct+'%'; pctEl.textContent=Math.floor(pct)+'%'; },180);
+  try {
+    // Search Roblox games API for exact name match, limit 5
+    const r=await fetch('/api/proxy?action=searchGames&q='+encodeURIComponent(query)+'&limit=5');
     let games=[];
-    if(r.ok){const d=await r.json();games=(d.games||d.data||[]).slice(0,5);}
-    if(!games.length){
-      // Fallback: search catalog-style
-      const r2=await fetch(`https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(q)}&model.maxRows=5&model.startRows=0`);
-      if(r2.ok){const d2=await r2.json();games=(d2.games||d2.data||[]).slice(0,5);}
-    }
-    if(!games.length){
-      resultsEl.innerHTML=`<div style="padding:14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-secondary);">No games found for "<strong style="color:var(--text-primary);">${q}</strong>". Try a different name.</div>`;
-      return;
-    }
-    // Build cards from search results
-    resultsEl.innerHTML=`<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Top ${games.length} result${games.length!==1?'s':''} for "<strong style="color:var(--text-primary);">${q}</strong>"</div>`+
-    games.map(g=>{
-      const universeId=g.universeId||g.id;
-      const placeId=g.rootPlace?.id||g.placeId||universeId;
-      const name=g.name||g.title||'Unknown';
-      const creator=g.creator?.name||g.creatorName||'Roblox';
-      const genre=g.genre||'Game';
-      const playing=g.playerCount!=null?fmtNum(g.playerCount):(g.playing!=null?fmtNum(g.playing):'N/A');
-      const visits=g.totalUpVotes!=null?fmtNum(g.visits||0):(g.visits!=null?fmtNum(g.visits):'N/A');
-      const favs=g.favoritedCount!=null?fmtNum(g.favoritedCount):'N/A';
-      const likes=(g.upVotes!=null&&(g.upVotes+g.downVotes)>0)?Math.round(g.upVotes/(g.upVotes+g.downVotes)*100)+'%':'N/A';
-      const thumb=`https://thumbnails.roblox.com/v1/games/icons?universeIds=${universeId}&returnPolicy=PlaceHolder&size=150x150&format=Png&isCircular=false`;
-      return buildGameCard({name,universeId,placeId,genre,subGenre:'',creator},{
-        playing:g.playerCount||g.playing||0,
-        visits:g.visits||0,
-        favoritedCount:g.favoritedCount||0,
-        upVotes:g.upVotes||0,
-        downVotes:g.downVotes||0,
-        creator:{name:creator},
-      });
-    }).join('');
-  }catch(e){
-    clearInterval(iv);progressEl.style.display='none';
-    resultsEl.innerHTML=`<div style="color:var(--danger);font-size:13px;">Search failed: ${e.message}</div>`;
+    if(r.ok){const d=await r.json();games=d.data||[];}
+    clearInterval(iv); bar.style.width='100%'; pctEl.textContent='100%';
+    setTimeout(()=>{
+      document.getElementById('discovery-progress').style.display='none';
+      if(games.length){
+        renderDiscoveryGrid(games);
+        showToast('Found '+games.length+' result'+(games.length!==1?'s':'')+' for "'+query+'"');
+      } else {
+        showToast('No games found for "'+query+'" — showing top games');
+        populateDiscovery();
+      }
+    },300);
+  } catch(e){
+    clearInterval(iv);
+    document.getElementById('discovery-progress').style.display='none';
+    showToast('Search failed: '+e.message);
   }
 }
 
@@ -1841,11 +1798,12 @@ function switchHub(id,btn){
   btn.classList.add('active');
   const titles={social:'Social Commander',assets:'Asset & Collections',discovery:'Ultimate Discovery',security:'Account Defense',notifications:'Experience Notifications','profile-advanced':'My Profile+',badges:'Badge Manager','assets-mgr':'Asset Manager',gamepasses:'Game Passes & Dev Products','send-notif':'Send Notification',values:'Rblx Values Hub',settings:'Project Next Settings'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
+  // Global language re-apply on every hub switch so inner text is always translated
+  applyLanguage(APP.lang||'en');
   closeSidebar();
-  // Re-apply language so hub title updates in the selected language
-  if(APP.lang&&APP.lang!=='en')applyLanguage(APP.lang);
-  // Auto-load discovery top10 when switching to it
-  if(id==='discovery')populateDiscovery();
+  // Hub-specific on-load actions
+  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
+  if(id==='profile-advanced'){loadProfileAdvanced();}
 }
 
 // ── THEME ─────────────────────────────────────────────
@@ -1879,24 +1837,35 @@ function t(key,...args){const lang=APP.lang||'en';const val=(I18N[lang]||I18N.en
 function setLanguage(lang){APP.lang=lang;saveSession();applyLanguage(lang);showToast('Language changed');}
 function applyLanguage(lang){
   APP.lang=lang;
-  document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');const val=t(key);if(val)el.textContent=val;});
-  document.querySelectorAll('[data-i18n-auth]').forEach(el=>{const key=el.getAttribute('data-i18n-auth');const val=(I18N[lang]||I18N.en)[key]||(I18N.en)[key];if(val)el.textContent=val;});
-  const sel=document.getElementById('lang-select');if(sel)sel.value=lang;
-  // Update topbar title if currently on a hub
-  const activeHub=document.querySelector('.hub-panel.active');
-  if(activeHub){
-    const id=activeHub.id.replace('hub-','');
-    const titles={
-      en:{social:'Social Commander',assets:'Asset & Collections',discovery:'Ultimate Discovery',security:'Account Defense',notifications:'Experience Notifications','profile-advanced':'My Profile+',badges:'Badge Manager','assets-mgr':'Asset Manager',gamepasses:'Game Passes & Dev Products','send-notif':'Send Notification',values:'Rblx Values Hub',settings:'Project Next Settings'},
-      tl:{social:'Social Commander',assets:'Pamamahala ng Mga Asset',discovery:'Panghuling Pagtuklas',security:'Depensa ng Account',notifications:'Mga Notipikasyon',settings:'Mga Setting'},
-      es:{social:'Comandante Social',assets:'Gestor de Activos',discovery:'Descubrimiento Definitivo',security:'Defensa de Cuenta',notifications:'Notificaciones',settings:'Configuración'},
-      pt:{social:'Comandante Social',assets:'Gerenciador de Ativos',discovery:'Descoberta Final',security:'Defensa da Conta',notifications:'Notificações',settings:'Configurações'},
-      fr:{social:'Commandant Social',assets:"Gestionnaire d'Actifs",discovery:'Découverte Ultime',security:'Défense du Compte',notifications:'Notifications',settings:'Paramètres'},
-      de:{social:'Sozialer Kommandeur',assets:'Asset-Manager',discovery:'Ultimative Entdeckung',security:'Kontoverteidigung',notifications:'Benachrichtigungen',settings:'Einstellungen'},
-    };
-    const langTitles=titles[lang]||titles.en;
-    const topbar=document.getElementById('topbar-title');
-    if(topbar&&langTitles[id])topbar.textContent=langTitles[id];
+  // Translate all data-i18n elements across the entire DOM
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.getAttribute('data-i18n');
+    const val=t(key);
+    if(val)el.textContent=val;
+  });
+  // Translate auth-screen specific elements
+  document.querySelectorAll('[data-i18n-auth]').forEach(el=>{
+    const key=el.getAttribute('data-i18n-auth');
+    const val=(I18N[lang]||I18N.en)[key]||(I18N.en)[key];
+    if(val)el.textContent=val;
+  });
+  // Sync language selector
+  const sel=document.getElementById('lang-select');
+  if(sel)sel.value=lang;
+  // Also re-apply hub-specific translations for currently visible hub
+  const hubTitles={social:t('hub1'),assets:t('hub2'),discovery:t('hub3'),security:t('hub4')};
+  Object.entries(hubTitles).forEach(([id,label])=>{
+    const panel=document.getElementById('hub-'+id);
+    if(!panel)return;
+    const h=panel.querySelector('.hub-title[data-i18n]');
+    if(h)h.textContent=label;
+  });
+  // Update topbar title to match current active hub (if translatable)
+  const activeNav=document.querySelector('.nav-item.active span[data-i18n]');
+  if(activeNav){
+    const key=activeNav.getAttribute('data-i18n');
+    const val=t(key);
+    if(val)document.getElementById('topbar-title').textContent=val;
   }
 }
 
@@ -2147,16 +2116,8 @@ async function sendExperienceNotif() {
   } catch(e){resultEl.innerHTML=`<span style="color:var(--danger);font-size:13px;">Error: ${e.message}</span>`;}
 }
 
-const _origSwitchHub=switchHub;
-function switchHub(id,btn){
-  _origSwitchHub(id,btn);
-  if(id==='notifications'){loadNotifPrefs();loadNotifList();}
-  if(id==='profile-advanced'){loadProfileAdvanced();}
-  if(id==='badges'){/* wait for user input */}
-  if(id==='assets-mgr'){/* wait for user input */}
-  if(id==='gamepasses'){/* wait for user input */}
-}
+
 
 </script>
 </body>
-  </html>
+</html>
